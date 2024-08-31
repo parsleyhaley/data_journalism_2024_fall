@@ -10,6 +10,97 @@ output:
       collapsed: true
       smooth_scroll: false
 ---
+08/30/2024: Some Notes on Basic R Commands and Functions
+
+Maybe the most basic command...
+```{r}
+2+2
+```
+
+```
+Use the left facing arrow to assign things to variables. And use * for multiplication.
+
+```
+```{r}
+first <-1
+second <-2
+second * first 
+```
+
+```
+You can have as many variables as you want. And you can name them whatever you want. 
+
+```
+```{r}
+
+butterfly <-3
+spider <- 6
+ant <- 10
+butterfly * spider * ant
+```
+
+```
+About Functions
+
+
+HINT: "A function is a little bit of computer code that takes in information and follows a series of pre-determined steps and spits it back out. A recipe to make pizza is a kind of function. We might call it make_pizza()." In this example, make_pizza take the ingredients of a pizza, passes them through preset outlined steps (kneading, baking, etc) to make the output of make pizza(), a finished pie. Also -- a good argument for this function might be make pizza (pepperoni, cheese, flour, water, oil, salt, etc) for output: pepperoni pizza.
+
+'''
+
+Eventually, we will use various libraries to help us analyze data.
+
+Here are some functions we will use when we analyze campaign contribution data (in a CSV file format) using tidyverse libraries:
+
+glimpse (variable name) gives a list of the columns, data type of each column, and first few values of each column. 
+
+head(variable name) prints out the column and first six rows of data.
+
+Some other functions...
+in the dplyr library, the summarize (variable name) function counts things and creates a new data frame (I'm not sure what this means)
+
+arrange (variable name) arranges data in ascending order. If written like this, it will sort in descending order: arrange(desc(count_contribs))
+
+```{r}
+
+```
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
