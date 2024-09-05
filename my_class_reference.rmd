@@ -67,7 +67,9 @@ arrange (variable name) arranges data in ascending order. If written like this, 
 ```
 
 
-
+ group_by(date)
+  summarise()
+  arrange(desc(count_contribs))
 
 
 
