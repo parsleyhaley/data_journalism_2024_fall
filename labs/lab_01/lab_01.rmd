@@ -173,10 +173,11 @@ west_virginia_winred_contributions |>
 
 Store it as a variable object called `wv_summary` so that you can examine it with the data viewer. What newsworthy nuggets jump out at you that you could imagine dropping into a news story? Write a few summary sentences with overall findings.
 
-**A7**.
+**A7**. In West Virginia, $87,131.68 of election donations were ultimately returned to donors. The top six recipients of donations in West Virginia were organizations supporting Donald Trump or the Republican party. An organization representing Riley Moore, the West Virginia state treasurer and candidate for congress, received the 7th most amount of money. 2,891 West Virginias made contributions of $10,000. Of those 10,000 donations, 1298 were refunded. 
+
 
 ```{r}
-west_virginia_winred_contributions |>
+wv_summary<- west_virginia_winred_contributions |>
   group_by(memo_text) |>
   summarise(
     count_contribs = n(),
@@ -186,5 +187,5 @@ west_virginia_winred_contributions |>
     min_amount = min(amount),
     max_amount = max(amount),
   ) |>
-  arrange(desc(count_contribs)) 
+  arrange(desc(max_amount)) 
 ```
