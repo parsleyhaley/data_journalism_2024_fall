@@ -1,0 +1,190 @@
+---
+title: "lab_01"
+author: "Derek Willis"
+date: "2024-08-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Turn off scientific notation
+options(scipen=999)
+```
+
+## About this lab
+
+To complete this lab, you need to: \* run existing code as directed (look for **Task**). \* modify existing code as directed (look for **Task**). \* write code in empty codeblocks provided to answer questions included (look for **Q**). \* write out the answer in the form of a complete sentence in the space given (look for **A**). When you are finished, commit changes and push to your personal GitHub repo, then submit the URL to this document on ELMS.
+
+Remember to add any new verbs or concepts to your reference notebook!
+
+## Load libraries and establish settings
+
+**Task** Run the codeblock below to load the Tidyverse. To run the codeblock, hit the little green play button in the upper right corner of the gray area (the codeblock) below.
+
+```{r}
+# Load the tidyverse. If you have not installed the tidyverse already, remove the # from the next line and run it first.  
+# install.packages('tidyverse')
+library(tidyverse)
+```
+
+## Load Data
+
+We're going to load the slice of WinRed contribution data from West Virginia, which is in a file called `lab_01.rds`
+
+**Task** Using the example from the pre_lab, write code to load the RDS file and assign it to a good variable name.
+
+```{r}
+west_virginia_winred_contributions <- read_rds("lab_01.rds")
+
+```
+
+
+## Examine Data
+
+**Task** Run the codeblock below to use glimpse to get a sense of the column names, types and sample data.
+
+
+**Q1** How many rows and columns does this dataframe have?
+
+**A1** This dataframe has 24 columns and 40,441 rows. 
+
+```{r}
+glimpse(west_virginia_winred_contributions)
+
+```
+
+## Answer questions
+
+**Q2** Which West Virginia city provided the largest number of contributions? How many?
+
+**A2** The city of Charleston provided the largest number of contributions at 3,226. 
+
+```{r}
+west_virginia_winred_contributions |>
+  group_by(city) |>
+  summarise(
+    count_contribs = n(),
+  )|>
+  arrange(desc(count_contribs))
+```
+
+**Q3** Which West Virginia cities accounted for the fewest contributions? How many of them, roughly speaking?
+Sixty-three West Virgnina cities accounted for the fewest contributions at one contribution per city. 
+Allen Junction	1			
+Alum Bridge	1			
+BRIDGEPORT	1			
+Bergoo	1			
+Berkeley Spgs	1			
+Bloomingrose	1			
+Breeden	1			
+Brenton	1			
+Bristol	1			
+Buckeye
+Canvas	1			
+Ccbxxthvc	1			
+Clothier	1			
+Coal city	1			
+Costa	1			
+DANIELS	1			
+Dawes	1			
+Dingess	1			
+Dunmore	1			
+Durbin
+Exchange	1			
+Falling Wtrs	1			
+Flat Top	1			
+Folsom	1			
+Gallagher	1			
+Griffithsville	1			
+Harman	1			
+Harper	1			
+Hines	1			
+Hometown	1	
+Hundred	1			
+Ireland	1			
+Lochgelly	1			
+Lorado	1			
+Marmet	1			
+Meador	1			
+Moatsville	1			
+Nebo	1			
+Newburg	1			
+North Matewan
+Omar WV	1			
+Orgas	1			
+Palestine	1			
+Peytona	1			
+Ragland	1			
+Ranger	1			
+Rippon	1			
+S Charleston	1			
+Secondcreek	1			
+Shock
+Slab Fork	1			
+Squire	1			
+St Albans	1			
+Tallmansville	1			
+Valley Fork	1			
+Walkersville	1			
+Wana	1			
+Wayside	1			
+West Liberty	1			
+West Ville
+Winifrede	1			
+Wolfcreek	1			
+milton
+...
+
+**A3**
+
+```{r}
+west_virginia_winred_contributions |>
+  group_by(city) |>
+  summarise(
+    count_contribs = n(),
+  ) |>
+  arrange(count_contribs)
+```
+
+**Q4** What's your best educated guess to explain why the city identified in question 2 had more contributions compared to the cities identified in question 3? Hint: you won't find the answer in the data, you'll need to do some quick web research. You do not need to write any code for this question, so no codeblock is provided.
+
+**A4** The most populous city in West Virginia is Charleston, so it would make sense that more donations per capita would come from that city. 
+
+**Q5** What recipient got the largest total amount of money? How many contributions did they receive and what was the average donation?
+
+**A5** Trump National Committee JFC, Inc. got the largest total amount of money. It received 14063 contributions. The average donation was $32.99.
+
+```{r}
+west_virginia_winred_contributions |>
+  group_by(memo_text) |>
+  summarise(
+    count_contribs = n(),
+    total_amount = sum(amount),
+    mean_amount = mean(amount),
+  ) |>
+  arrange(desc(total_amount))
+```
+
+**Q6** What is that top recipient and what explains its popularity? Hint: this will require web research, you won't be able to answer this purely from the data set. You do not need to write any code for this question, so no codeblock is provided.
+
+**A6** Trump National Committee JFC, Inc.is a joint fundraising committee between Trump and the RNC. There is no limit for the amount of money that can be donated to a JFC, so candidates generally use them to solicit larger donations from wealthy donors (which would likely result in a larger total collection then the amount obtained from donations to recipients that are not JFCs, which are subject to donation limits). Source: https://www.opensecrets.org/news/2019/08/what-are-joint-fundraising-committees-and-how-are-they-helping-trump/
+
+**Q7**. Using the answer from A5 as a starting point, produce a summary table that has the following information for each recipient: \* count of contributions \* total amount of all contributions \* the average contribution amount \* the median contribution amount \* the smallest contribution amount \* the largest contribution amount
+
+Store it as a variable object called `wv_summary` so that you can examine it with the data viewer. What newsworthy nuggets jump out at you that you could imagine dropping into a news story? Write a few summary sentences with overall findings.
+
+**A7**.
+
+```{r}
+west_virginia_winred_contributions |>
+  group_by(memo_text) |>
+  summarise(
+    count_contribs = n(),
+    total_amount = sum(amount),
+    mean_amount = mean(amount),
+    median_amount = median(amount),
+    min_amount = min(amount),
+    max_amount = max(amount),
+  ) |>
+  arrange(desc(count_contribs)) 
+```
