@@ -71,6 +71,18 @@ arrange (variable name) arranges data in ascending order. If written like this, 
   summarise()
   arrange(desc(count_contribs))
 
+lubridate() corrects the month/day/year order of dates in CSV
+head() shows top six lines
+colnames() shows the row and column names 
+glimpse() shows rows and columns
+ mutate(
+ percent_election_day = (election_day/votes)*100
+)            use *100 to make the result a percentage
+
+mutate makes a new column.
+
+  arrange(desc(percent_election_day)). arrange desc. orders from largest to smallest
+
 
 
 
