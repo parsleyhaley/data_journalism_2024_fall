@@ -82,6 +82,10 @@ glimpse() shows rows and columns
 mutate makes a new column.
 
   arrange(desc(percent_election_day)). arrange desc. orders from largest to smallest
+  
+  
+  > week('2024-07-25')
+[1] 30
 
 
 
