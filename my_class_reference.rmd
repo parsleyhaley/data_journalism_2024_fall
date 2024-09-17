@@ -87,6 +87,29 @@ mutate makes a new column.
   > week('2024-07-25')
 [1] 30
 
+guess_max=10 guess the data type of each column using first 10 rows
+WHEN USING GUESS/problem, if it finds one even character that's not a number, it will automatically recognize that column's values as characters 
+
+.default = (nameofcolumn) at the end of function series ...MEANS don't change anything but what the function said. See example ->
+texas_precinct_20 <- texas_precinct_20 |>
+  mutate(election_day = case_when(
+    election_day == '5+' ~ '49',
+    .default = election_day
+  ))
+  
+  ----
+ use as.numeric to say that everything in a column is a number (make sure that everything can be run as a number before running this) example ->
+ texas_precinct_20 <- texas_precinct_20 |> mutate(election_day = as.numeric(election_day))
+
+
+Janitor makes header rows consistent in terms of case, where _ (gets rid of spaces) are inserted, etc. --> it's the clean_names(function) and it's just for names of columns.  
+
+NO COLUMN NAMES THAT BEGIN WITH NUMBERS!!!!! Janitor will put an x in front to fix this.
+
+
+
+
+
 
 
 
