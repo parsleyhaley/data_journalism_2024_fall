@@ -107,7 +107,18 @@ Janitor makes header rows consistent in terms of case, where _ (gets rid of spac
 NO COLUMN NAMES THAT BEGIN WITH NUMBERS!!!!! Janitor will put an x in front to fix this.
 
 
-
+maryland_winred_categories |> 
+  group_by(amount_category) |> 
+  summarize(total_amount = sum(amount)) |> 
+  arrange(desc(total_amount)) 
+  
+  VS
+  
+  clean_md_contribs |>
+     group_by(contributor_zip) |>
+   summarise(
+     total_contributions = n()) |>
+  arrange(desc(total_contributions))
 
 
 
