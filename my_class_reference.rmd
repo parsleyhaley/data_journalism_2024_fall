@@ -60,6 +60,7 @@ in the dplyr library, the summarize (variable name) function counts things and c
 
 arrange (variable name) arranges data in ascending order. If written like this, it will sort in descending order: arrange(desc(count_contribs))
 
+
 ```{r}
 
 ```
@@ -124,16 +125,23 @@ maryland_winred_categories |>
 
 
 
+bind_rows takes a bunch of rows and combines them together: 
+county_voters_combined <- bind_rows(list(county_voters_2016, county_voters_2018, county_voters_2020, county_voters_2022, county_voters_2024))
+View(county_voters_combined)
+ 
 
 
 
+**** JOIN! 
 
+maryland_population |> left_join(county_voters_2020, join_by(COUNTY))
+would technically work without the join_by, but it will just match by column name and not example the data. the join_by tells R which columns to connect with joins
 
+REMEMBER TO GIVE DATA SET A NEW NAME (MAKE NEW DATA FRAME) WHEN YOU DO A JOIN!!!
 
+Join won't work for different data types
 
-
-
-
+Joins are very powerful and useful, but they are based on exact matches
 
 
 
