@@ -122,6 +122,8 @@ maryland_winred_categories |>
   arrange(desc(total_contributions))
 
 
+    total = n()) |>  COUNTS THE NUMBER OF ROWS
+
 
 
 

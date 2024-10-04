@@ -1,0 +1,149 @@
+---
+title: "lab_05"
+author: "derek willis"
+date: "2024-09-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries and establish settings
+
+```{r}
+# load the tidyverse
+options(scipen=999)
+library(tidyverse)
+library(lubridate)
+```
+
+## Getting Started
+
+This week we'll be combining and joining data to make it more useful and to ask some questions about it. This week, we'll revisit our new Maryland voters data and try to join it with contributions to the Harris campaign from Maryland donors made via ActBlue. Can we find new voters who are not registered Democrats who gave to Harris after she became a presidential candidate on July 21? What, if anything, can we say about those people?
+
+We'll be doing something similar to what Ence Morse did for [this Washington Post story](https://www.washingtonpost.com/politics/2024/09/24/kamala-harris-younger-donors/?pwapi_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyZWFzb24iOiJnaWZ0IiwibmJmIjoxNzI3MzIzMjAwLCJpc3MiOiJzdWJzY3JpcHRpb25zIiwiZXhwIjoxNzI4NzA1NTk5LCJpYXQiOjE3MjczMjMyMDAsImp0aSI6ImIwYWMxNTk4LWMwMDgtNDE5Ny04MjAyLWVmMWNjZWFmYWZiMiIsInVybCI6Imh0dHBzOi8vd3d3Lndhc2hpbmd0b25wb3N0LmNvbS9wb2xpdGljcy8yMDI0LzA5LzI0L2thbWFsYS1oYXJyaXMteW91bmdlci1kb25vcnMvIn0.3-s0tBkMV7Y9DD21CBsKMlaliGlOKT2egCO-UFT735Y), just on a smaller scale.
+
+First, load two CSV contribution files in the `data` folder, one each for donations made in July and August, and then combine them into a single dataframe.
+
+```{r}
+
+august_donations <- read_csv("data/august_harris.csv")
+july_donations <- read_csv("data/july_harris.csv") 
+# load the Harris contribution data files and combine them
+```
+```{r}
+donations_total <- bind_rows(list(august_donations, july_donations))
+View(donations_total)
+```
+
+Next, let's read in the new voters (people who registered in 2024):
+
+```{r}
+# load the new voters data
+
+new_voters <- read_csv("data/new_voters.csv")
+```
+
+Next join the Harris donations to the voter data. Remember, people's names are common, **so you'll want to use name columns and address information**. You'll need to figure out which columns to use from both dataframes. The new_voters data has both a single Address column and various parts of the address, such as HouseNumber. Make a plan for picking your join columns - try out some combinations - and save the results to a new dataframe.
+
+```{r}
+# join the combined Harris file to the new voters
+# you will need to determine what columns to use
+
+new_voter_and_donations <- donations_total|> 
+  inner_join(new_voters, join_by(first_name == FirstName, last_name == LastName, city == ResidentialCity, zip == ResidentialZip, address_one == Address))
+```
+
+## Answer questions
+
+Q1. Explain why you used the columns you did to make the join, and why that result is better than other ways you tried. Are there any problems with the join you made, such as the possibility of false positives?
+
+A1. I joined using first names, last names, city, zip, and address. In the donations_total dataframe, the street suffixes are not standardized -- some addresses use the suffix "street," while others use the abbreviation "st." for example. in the new_voters dataframe, the suffixes are all standardized as abbreviations. So, when I joined by address above, I excluded the addresses that might be matches besides a discrepancy between the street suffix. "313 TUSCANY ROAD" would be excluded, for example, even if the residents of 313 TUSCANY ROAD (my parents) donated and registered to vote, because the address would appear as 313 TUSCANY RD in the new voters dataset. I made this choice in order to decrease the liklihood of false positives. If I only matched by city or zip code, there's a chance that two people with the same name could live in the same area (defined by city or zip code) and show up on the joined dataset even if only one is actually a new voter, creating a false positive. 
+
+
+Q2. Based on your join, how many donations to Harris have come from people who registered this year? How many unique people does that represent, and which donors have given the largest *number* of donations since July 20?
+
+A2. Based on my join, 324 donations to Harris have come from people who registered this year. That represents 237 unique people. Sophia Hoffer-Perkins, Eric Snipe, and Brittany Musolino have had the largest number of donations since July 20.  
+
+```{r}
+new_voter_and_donations |> 
+  group_by(VTR_ID, first_name, last_name) |> 
+  summarize(
+    number_donations = n()) |> 
+  arrange(desc(number_donations))
+ 
+```
+
+Q3. What are the party and gender breakdowns of those donors? How many donations has Harris gotten from non-Democrats?
+
+A3. 123 of the donors are women, and 105 of the donors are male. For 9 voters, their gender is recorded as NA.
+207 of the voters are democrats. 22 are unaffiliated, 3 are republicans, 2 are libertarians, 2 are registered as other, and 1 is from the No Labels Maryland party. 
+
+Harris received 292 donations from democrats, 23 donations from unaffiliated people, 4 donations from republicans, 2 donations from libertarians, 2 donations from people registered as "other", and one donation from the No Labels Maryland party. 
+
+```{r}
+new_voter_and_donations |> 
+  group_by(Party) |> 
+  summarize(
+    number_donations = n()) |> 
+  arrange(desc(number_donations))
+```
+
+
+
+```{r}
+party_gender_group <- new_voter_and_donations |> 
+  group_by(VTR_ID, first_name, last_name, Party, Gender) |> 
+  summarize(
+    number_donations = n()) |> 
+  arrange(desc(number_donations))
+ 
+```
+
+```{r}
+party_gender_group |> 
+  group_by(Gender) |> 
+  summarize(
+    total = n()) |> 
+  arrange(desc(total))
+```
+```{r}
+party_gender_group |> 
+  group_by(Party) |> 
+  summarize(
+    total = n()) |> 
+  arrange(desc(total))
+```
+
+
+Q4. Choose your own adventure: I want you to come up with a question you could ask of one of the dataframes we've created for this lab. It could involve just the new voters, or the donors or the joined dataframe, but it cannot be a variation of a previous question (so, for example, you can't ask, "How many Republicans have given to Harris"). First write the question and then try to answer it by writing code. If you're not sure of the exact code, try googling (or ask me for advice) but, at a minimum, describe what you think you'd have to do to answer it and what the results would look like. That can help.
+
+A4: How many of the newly-registered voters who also donated to Harris just became old enough to vote in this election cycle (i.e. this is the first election cycle they have been eligible)? 
+
+-have to be 18 in order to vote
+-my count would also include 19 year olds who were not eligible to vote during the 2022 elections.
+-the general election in 2022 was held November 8, 2022
+-birthday November 9, 2004 and later
+-2024 election is held November 5
+-latest eligible birthdate is November 5, 2006
+Task: count number of people born between 11/9/2004 and 11/5/2006 who are included in the joined dataframe new_voter_and_donations
+
+After figuring out the date range above, I used the filter function to identify the registered voter-donors whose birthdays are after November 11, 2004. I expected that the results would not include anyone born after November 5, 2006, because that would be the youngest age at which someone can vote in the upcoming election. However, I found several people who were born after that date. I did some research and learned that in Maryland, you can register to vote at 16 (you just can't vote until you are 18). I used select and arrange below to learn more about these donors' parties and ge ographic locations.
+
+```{r}
+young_voters <- new_voter_and_donations |>
+  filter(BirthDate > '2004-11-08') 
+```
+
+```{r}
+young_voters |>
+  select(first_name, last_name, BirthDate, Party, city, amount)|>
+arrange(desc(BirthDate))
+
+```
+
+
+
+
+
