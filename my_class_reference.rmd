@@ -148,9 +148,11 @@ Joins are very powerful and useful, but they are based on exact matches
 
 
 
+benzie_2024 <- read_csv("tabula-Benzie Aug 6,2024 Official Precinct Results.csv", col_names = FALSE) (this means that there are no column names. R will make them up)
 
+filter(!is.na(X2)) |> helps to remove NA columns (says keep everything but). Helps clear out rows that appear empty
 
-
+separate(candidate, c("candidate", "party"), sep=' - ') |>  separates the candidate column. Then splits the existing "candidate" into two new columns (candidate and party). Then sep, which shows what separates the two columns
 
 
 
