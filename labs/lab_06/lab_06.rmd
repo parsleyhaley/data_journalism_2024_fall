@@ -1,0 +1,271 @@
+---
+title: "lab_06"
+author: "derek willis"
+date: "2024-10-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## You will need
+
+-   Tabula
+
+## Load libraries and establish settings
+
+```{r}
+# Turn off scientific notation
+options(scipen=999)
+
+# Load the tidyverse and any other libraries you'll need
+library(tidyverse)
+library(lubridate)
+library(janitor)
+
+```
+
+
+## Get Our PDF
+
+We'll be working with the [Maryland monthly voter registration update](https://elections.maryland.gov/pdf/vrar/2024_09.pdf) from the State Board of Elections. You'll want to download it to a place you'll remember (like your Downloads folder, or the labs folder in your repository). The goal is to write a couple of paragraphs that summarize the changes in voter registration in Maryland during the month of September.
+
+## Setup Tabula
+
+Start Tabula, then go to <http://127.0.0.1:8080/> in your browser. Click the "Browse" button and find the PDF file and click "open", and then click the "Import button" in Tabula. This will take a few seconds.
+
+This PDF has multiple possible tables to extract. We're going to make four dataframes: 
+
+* new registrations by party
+* removals by party
+* changes in registration
+* current registrations by county.
+
+You will need to draw boxes around four sections and export four CSV files that you will load into R. In Tabula, draw a box around the borders of those tables and click the "Preview & Export Extracted Data" button for each one. The export should look pretty clean, but might be missing some column headers. You'll need to include total columns.
+
+Export each CSV (each one should be called `tabula-2024-09.csv` by default, so you should rename them for clarity) to your lab_06/data folder.
+
+From there, you will need to read in and clean up the data, and in particular the headers. You can choose to include the headers from the PDF in your exported CSV files OR to exclude them and add them when importing. The pre_lab has an example of how to do this!
+
+## Load and clean up the data in R
+
+You will need to read in and clean up the data so that it can be used for analysis. By "clean" I mean the column headers must not contain spaces and they should have meaningful names, not "x1" or something similar. The current registrations dataframe *MUST* include the county name, but should not include the columns under `Changes` and `Party Affiliation From`. How you do that is up to you (and could involve something outside R), but you can use `select()` with or without the minus sign to include or exclude certain columns. You also can use the `rename` function to, well, rename columns.
+
+```{r}
+# Party registrations
+party_registrations <- read_csv("data/new_registration_sept_2024.csv") 
+clean_2024_party_registrations <- party_registrations |>
+  rename(summary = `...1`)
+
+
+```
+
+```{r}
+# Removals
+removals <- read_csv("data/removals_sept_2024.csv")
+clean_2024_removals <- removals |>
+ filter(!is.na(DEM)) |>
+rename(removals = `...1`)
+```
+
+```{r}
+# Changes
+registration_changes <- read_csv("data/registration_changes_sept_2024.csv")
+clean_2024_registration_changes <- registration_changes|>
+   rename(county = `...1`)
+```
+```{r}
+# Current registrations
+
+current_2024 <- read_csv("data/registration_current_and_change.csv")
+clean_2024_current <- current_2024 |>
+  clean_names() |>
+  rename(county = x1) |>
+  select(county, 12:20)  |>
+  separate(`conf_oth_total`, c("oth", "total"), sep=' ') |>
+  rename(REP = rep_13) |>
+  rename(NLM = nlm_14)|>
+  rename(LIB = lib_15) |>
+  rename(GRN = grn_16) |>
+  rename(UNAF = unaf_17) |>
+  rename(DEM= dem_12) |>
+  rename(conf_mailing= inactivemailing) |>
+  rename(inactive = x20)
+  
+
+```
+
+## Rinse, Repeat: September 2022 data
+
+Do all of that again, for the [September 2022 voter registration update](https://elections.maryland.gov/pdf/vrar/2022_09.pdf), so we can compare the two. If you've done well, this is easy: just do the same steps in Tabula, export the files and use the same code to read in and clean up the data, *just remember to give these dataframes different names* so that you can compare September 2024 to September 2022.
+
+To answer the following questions, you'll need to calculate percentages and do other calculations. Whether you do that by combining or joining dataframes or you write code to run separately on both is up to you.
+
+```{r}
+# Party registrations
+party_registrations_2022 <- read_csv("data/party_registration_2022.csv") 
+clean_2022_party_registrations <- party_registrations_2022 |>
+ rename(summary = `...1`)
+
+```
+
+```{r}
+# Removals
+removals_2022 <- read_csv("data/removals_sept_2022.csv")
+clean_2022_removals <- removals_2022 |>
+ filter(!is.na(DEM)) |>
+rename(removals = `...1`)
+
+```
+
+```{r}
+# Changes
+registration_changes_2022<- read_csv("data/changes_sept_2022.csv")
+clean_2022_registration_changes <- registration_changes_2022 |>
+   rename(county = `...1`)
+```
+
+```{r}
+# Current registrations
+current_2022 <- read_csv("data/current_sept_2022.csv")
+clean_2022_current <- current_2022 |>
+ rename(county = `...1`) |>
+select(county, 12:21) |>
+rename(DEM = DEM...12) |>
+  rename(REP = REP...13) |>
+  rename(GRN = GRN...14)|>
+  rename(LIB = LIB...15) |>
+  rename(WCP = WCP...16) |>
+  rename(UNAF = UNAF...17) |>
+  rename(OTH = OTH...18)|>
+  rename(total = TOTAL...19)|>
+  rename(conf_mailing = INACTIVEMAILINGCONF) |>
+  rename(inactive = ...21)
+ 
+
+
+```
+
+
+## Answer questions
+
+Q1. Calculate the percentage of registered Democrats, Republicans and unaffiliated voters for the entire state in September 2024 and September 2022, and then calculate the percentage change for those three party categories (the formula for percentage change is easy to remember: (New-Old)/Old). How would you describe the changes in these partisan categories in a story? What's the most interesting thing about these changes that would be the lede of that story?
+
+A1. In 2022, Maryland was 54.1% democrat, 24% republican, and 20.2% unaffiliated.
+
+NOTE at this point I started having trouble with the 2024 dataframe, and wasn't able to complete most of the questions, as you will see below.
+
+```{r}
+ clean_2022_current |> 
+  mutate(pct_dem = (DEM/total)*100, pct_rep = (REP/total)*100, pct_unaf = (UNAF/total)*100) |> 
+  arrange(desc(pct_dem)) |> 
+  select(county, pct_dem, pct_rep, pct_unaf)
+```
+
+```{r}
+cleaner_2024_current <- clean_2024_current |> 
+  clean_names()
+```
+
+
+```{r}
+current_2024 |> 
+
+```
+
+
+```{r}
+cleaner_2024_current |> 
+mutate(pct_dem = (rep/total)*100) 
+```
+```{r}
+cleanest_2024_current <- current_2024  |> 
+separate(`CONF OTH TOTAL`, c("oth", "total"), sep=' ') |> 
+select(`...1`, 12:21)  |>
+  rename(county = `...1`)|>
+rename(dem = DEM...12)|>
+rename(rep = REP...13) |>
+rename(nlm = NLM...14) |>
+rename(lib = LIB...15) |>
+rename(grn = GRN...16) |>
+rename(unaf = UNAF...17) |>
+rename(conf_mailing = INACTIVEMAILING)  |>
+  rename(inactive = `...20`)
+
+  
+```
+
+```{r}
+cleanest_2024_current |>
+  mutate(pct_dem = (dem/total)*100)
+```
+
+Q2. Among the Maryland jurisdictions with the most registered voters, which one had the biggest percentage increase in unaffiliated voters between 2022 and 2024? How did that county vote for governor in 2022 and for president in 2020? Contrast the partisan percentages of that county with the county that had the eighth-largest percentage increase in unaffiliated voters. You should display information from the data that shows the counties with the largest percentage increase first.
+
+A2. I can't get the code to run the 2024 percentages to run, *but* I would run the code below using the 2024 dataset. 
+
+```{r}
+clean_2022_current |> 
+  mutate(pct_dem = (DEM/total)*100, pct_rep = (REP/total)*100, pct_unaf = (UNAF/total)*100) |> 
+  arrange(desc(total)) |> 
+  select(county, pct_dem, pct_rep, pct_unaf, total)
+```
+
+
+```{r}
+clean_2022_current |> 
+  mutate(pct_dem = (DEM/total)*100, pct_rep = (REP/total)*100, pct_unaf = (UNAF/total)*100) |> 
+  arrange(desc(pct_dem)) |> 
+  select(county, pct_dem, pct_rep, pct_unaf)
+```
+```{r}
+
+```
+
+
+Q3. Do the party percentages of new registrants (% Dem, % Rep, % Unaffiliated) from September 2024 and September 2022 match the overall percentage of partisan registration in the state at those times?
+
+In other words, did new registrants mirror the overall partisan composition of the electorate, or were they different? Do any of the methods of registration vary significantly from the overall partisan pattern? Which method is worthy of further exploration?
+
+A3. 
+
+In 2022, 51.6% of newly registered voters were democrats. 15% were republican, and 30.6% were unaffiliated.
+
+
+```{r}
+clean_2022_current |> 
+  mutate(pct_dem = (DEM/total)*100, pct_rep = (REP/total)*100, pct_unaf = (UNAF/total)*100) |> 
+  arrange(desc(pct_dem)) |> 
+  select(county, pct_dem, pct_rep, pct_unaf)
+```
+
+
+
+Q4. Choose your own adventure! Using both the 2024 and 2022 data for one of the dataframes (changes, removals or new registrations), ask and answer a question that makes at least one comparison and requires code to answer. That could involve calculating a percentage, percentage change or the raw difference between two columns.
+
+A4.
+What percentage of the newly registered voters in 2024 were democrats, republicans, and unaffiliated voters? compare with 2022's results.
+
+In 2022, 51.6% of newly registered voters were democrats. 15% were republican, and 30.6% were unaffiliated.
+In 2024, 49.8% of newly registered voters were democrats, 18.2% were republicans, and 28.7% were unaffiliated. 
+
+```{r}
+clean_2022_party_registrations|> 
+  mutate(pct_dem = (DEM/TOTAL)*100, pct_rep = (REP/TOTAL)*100, pct_unaf = (UNAF/TOTAL)*100) |> 
+  arrange(desc(pct_dem)) |> 
+  select(summary, pct_dem, pct_rep, pct_unaf)
+```
+
+
+```{r}
+clean_2024_party_registrations|> 
+  mutate(pct_dem = (DEM/TOTAL)*100, pct_rep = (REP/TOTAL)*100, pct_unaf = (UNAF/TOTAL)*100) |> 
+  arrange(desc(pct_dem)) |> 
+  select(summary, pct_dem, pct_rep, pct_unaf)
+```
+
+
+Q5. What's the best story idea or question you've seen as a result of the work you've done in this lab?
+
+A5. 

@@ -102,7 +102,8 @@ You can now export that extracted table to a CSV file using the "Export" button.
 ```{r}
 benzie_2024 <- read_csv("tabula-Benzie Aug 6,2024 Official Precinct Results.csv")
 
-benzie_2024
+
+view(benzie_2024)
 ```
 
 ## Cleaning up the data in R

@@ -24,6 +24,7 @@ quarter_one <- read_csv("data/JAN-MAR-2023-SOD.csv")
 quarter_two <- read_csv("data/APRIL-JUNE 2023 SOD.csv")
 quarter_three <- read_csv("data/JULY-SEPTEMBER-2023SOD.csv")
 quarter_four <- read_csv("data/OCT-DEC-2023-SOD.csv")
+quarter_five <- read_csv("data/JAN-MAR-2024-SOD-DETAIL-GRID-FINAL.csv")
 
 ```
 
@@ -50,7 +51,7 @@ quarter_three_fixed <- quarter_three |>
 Task 4: bind the dataframes so we have one year's worth of data
 
 ```{r}
-full_year_2023 <- bind_rows(list(quarter_one, quarter_two, quarter_three_fixed, quarter_four))
+full_year_2023 <- bind_rows(list(quarter_one, quarter_two, quarter_three_fixed, quarter_four, quarter_five))
 view(full_year_2023)
 ```
 
