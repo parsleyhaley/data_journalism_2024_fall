@@ -156,7 +156,7 @@ separate(candidate, c("candidate", "party"), sep=' - ') |>  separates the candid
 
 
 
-
+p10 <- get_decennial(geography = "state", variables = "P001001", year = 2010)
 
 
 
