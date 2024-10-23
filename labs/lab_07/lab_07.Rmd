@@ -42,7 +42,7 @@ You'll need your Census API Key:
 
 You'll also need to load the list of American Community Survey variables from the 2022 5-year estimates so you can identify the codes you need:
 
-**Task** load the variables from the 2022 5-year ACS and save them to a dataframe
+**Task** load the variables from the 2022 5-year ACS and save them to a dataframe.
 
 ```{r}
 
@@ -54,7 +54,7 @@ ACS2022 <- load_variables(2022, "acs5", cache = TRUE)
 
 **Q1** What is the Maryland jurisdiction with the lowest median age, according to the ACS 2022 5-year estimates? You will need to find the variable for median age first.
 
-**A1**
+**A1** Baltimore city has the lowest median age. 
 
 ```{r}
 md_median_age <- get_acs(geography = "county",
@@ -63,11 +63,15 @@ md_median_age <- get_acs(geography = "county",
               year = 2022)
 ```
 
+```{r}
+md_median_age |>
+  arrange(estimate)
+```
 
 
 **Q2** Which Maryland counties have a median age of at least 50? You can use the dataframe you just made to answer this, but you must write code to display only those counties with a median age of at least 50.
 
-**A2**
+**A2** Talbot County and Worcester County both have median ages of at least 50.
 
 ```{r}
 md_median_age |>
@@ -83,30 +87,127 @@ Ticket-splitting (voting for candidates from multiple parties) in today's politi
 Load the two CSV files in the `data` folder: one containing the ballot choices of Frederick voters in five races (governor, comptroller, attorney general and U.S. House) and the other containing information about Frederick's voting locations. You'll need to join them together.
 
 ```{r}
-ballot_choices <- read_csv(data/frederick_cvr.csv)
-voting_locations <- read_csv(data/frederick_precincts.csv)
+ballot_choices <- read_csv("data/frederick_cvr.csv")
+voting_locations <- read_csv("data/frederick_precincts.csv")
+
+frederick_voting <- ballot_choices |> left_join(voting_locations, join_by(precinct)) 
 
 ```
 
 **Q3** Let's answer some basic questions about ticket-splitting: how many voters voted for different parties in the governor and comptroller's race? How many voted for the same party in both races? What percentage of all voters split their tickets in those races? In how many cases did voters choose the same party in all five contests? What percentage of all voters does that represent?
 
-**A3**
+**A3** 11,871 voters voted for difference parties in the governor and comptroller's race. 95,221 voters voted for the same party in both races. 11.06% of voters split their ticket in those races. In 48,604 cases voters chose democrats for all five contests. In 41,092 cases voters chose republicans for all five contests. In 218 cases the votes were marked "undervote," so they would be excluded from the count of the same party selected across five contests. In 83.6% of cases, voters chose the same party for all five contests.
 
 ```{r}
+41092+48604 = 89,696
+
+```
+```{r}
+(89696/107302)*100
+```
+
+
+```{r}
+frederick_voting |>
+  filter(governor_lt_governor == "DEM") |>
+  filter(comptroller == "DEM") |>
+  filter(attorney_general == "DEM") |>
+  filter(u_s_senator == "DEM") |>
+  filter(representative_in_congress_6 == "DEM") |>
+ summarise(
+    count=n())
+```
+
+```{r}
+frederick_voting |>
+  filter(governor_lt_governor == "REP") |>
+  filter(comptroller == "REP") |>
+  filter(attorney_general == "REP") |>
+  filter(u_s_senator == "REP") |>
+  filter(representative_in_congress_6 == "REP") |>
+ summarise(
+    count=n())
+```
+```{r}
+frederick_voting |>
+  filter(governor_lt_governor == "WCP") |>
+  filter(comptroller == "WCP") |>
+  filter(attorney_general == "WCP") |>
+  filter(u_s_senator == "WCP") |>
+  filter(representative_in_congress_6 == "WCP") |>
+ summarise(
+    count=n())
+```
+
+```{r}
+frederick_voting |>
+  filter(governor_lt_governor == "undervote") |>
+  filter(comptroller == "undervote") |>
+  filter(attorney_general == "undervote") |>
+  filter(u_s_senator == "undervote") |>
+  filter(representative_in_congress_6 == "undervote") |>
+ summarise(
+    count=n())
+```
+
+```{r}
+frederick_voting |>
+  summarise(
+    count=n()
+  )
 
 ```
 
+```{r}
+(11871/107302)*100
+```
+
+
 **Q4** Now let's look for the zip codes where voters preferred Republicans in every race *except* the governor's race, where Dan Cox lost to Wes Moore by a wide margin. Write code to generate a dataframe of zip codes with the number of those voters for each of those zip codes, ordering the dataframe so that the zip code with the most ticket-splitters appears first.
+
 
 **A4**
 
 ```{r}
+prefer_moore <- frederick_voting |>
+    filter(governor_lt_governor == "DEM") |>
+  filter(comptroller == "REP") |>
+  filter(attorney_general == "REP") |>
+  filter(u_s_senator == "REP") |>
+  filter(representative_in_congress_6 == "REP") |> 
+  group_by(zipcode) |> 
+  summarise(
+    votes=n()
+  )|> 
+  arrange(desc(votes))
 
 ```
 
 **Q5** Let's find out more about those zip codes from A4. Using tidycensus, get a dataframe of Maryland zip codes and their median ages, then join it to the dataframe you produced in A4. NOTE: you'll need to ensure that the two columns you use for the join are the same datatype. Summarize your findings; how would you describe the zip codes with more non-Cox Republicans compared to those with fewer? Where are those leading zip codes located?
 
-**A5**
+**A5** 
+All of the leading zip codes are close to the city of Frederick. The top three zip codes are located next to each other, in the northern part of the city of Frederick and slightly north of the city. The top fourth and fifth are located slightly south of the city and in the center of the city. The zip codes with fewer non-Cox Republicans are located closer to the outskirts of the county, away from the city of Frederick. 
+
+For the top four zip codes, the median age of residents is under 40. This is only true of eight of the 23 zip codes on the list. Zip code 21727, in Emmitsburg, MD has the lowest median age at 28.6, and had 16 non-Cox republican voters.
+
 
 ```{r}
+median_age_by_zip <- get_acs(geography="zcta", variables = "B01002_001", state='MD', year=2019) 
+
 ```
+
+
+```{r}
+prefer_moore <- prefer_moore |> mutate(across(zipcode, as.character))
+```
+
+
+```{r}
+prefer_moore_ages <- prefer_moore |>
+  left_join(median_age_by_zip, join_by(zipcode == GEOID)) |>
+  arrange(desc(votes))
+          
+```
+
+
+
