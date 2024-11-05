@@ -57,9 +57,8 @@ ACS2022 <- load_variables(2022, "acs5", cache = TRUE)
 **A1** Baltimore city has the lowest median age. 
 
 ```{r}
-md_median_age <- get_acs(geography = "county",
-              variables = c(median_age = "B01002_001"),
-              state = "MD",
+fips <- get_acs(geography = "fips",
+              variables = c(fips = "B01003_001"),
               year = 2022)
 ```
 
@@ -195,6 +194,13 @@ For the top four zip codes, the median age of residents is under 40. This is onl
 median_age_by_zip <- get_acs(geography="zcta", variables = "B01002_001", state='MD', year=2019) 
 
 ```
+
+```{r}
+median_age_by_zip <- get_acs(geography="zcta", variables = "B01002_001", state='MD', year=2019) 
+
+```
+
+
 
 
 ```{r}
