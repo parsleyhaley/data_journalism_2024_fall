@@ -1,0 +1,225 @@
+---
+title: "lab_10"
+author: "Derek Willis"
+date: "2024-11-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## You will need
+
+-   the tidyverse, janitor and tigris libraries
+-   you might choose to use the tidycensus library for Q3
+
+## Load libraries and establish settings
+
+**Task** Create a codeblock and load appropriate packages and settings for this lab.
+
+```{r}
+# Turn off scientific notation
+options(scipen=999)
+
+# Load libraries
+
+library(tidyverse)
+library(sf)
+library(tigris)
+library(scales)
+library(dplyr)
+
+```
+
+Let's explore the election results from last night and make some maps!
+
+## Questions
+
+**Q1.** Make a county-level map of Maryland's results for U.S. Senate using `md_senate_county_24.csv` in the data folder, calculating the difference between Angela Alsobrooks's percentage of the total votes and Larry Hogan's percentage of the total votes and displaying that percentage difference on the map. What is the story here, and what is the county with the most interesting results?
+
+**A1.** Hogan won the majority of Maryland's counties. Alsobrooks won with more votes than Hogan in only five Maryland counties, but the number of votes from those counties were enough to carry her win. In Baltimore County, which has the third highest number of registered democrats in the state, and where democrats outnumber republicans 2:1,  (https://elections.maryland.gov/press_room/2020_stats/Eligible%20Active%20Voters%20by%20County%20-%20PG20.pdf), votes for Hogan and Alsobrooks were about equally split. 
+
+```{r}
+senate <- read_csv("data/md_senate_county_24.csv")
+
+senate <- senate  |>
+  mutate(pct_hogan = Hogan/(Alsobrooks + Hogan + Scott)) |>
+  mutate(pct_alsobrooks = Alsobrooks/(Alsobrooks + Hogan + Scott)) |>
+  mutate(pct_difference = pct_alsobrooks-pct_hogan)
+
+senate <- senate |>
+  mutate(GEOID = (as.character(GEOID)))
+
+counties <- counties()
+
+md_counties <- counties |>
+  filter(STATEFP == "24")
+
+senate_geom <- md_counties |>
+  left_join(senate,join_by(GEOID))
+
+```
+
+
+```{r}
+ggplot() +
+  geom_sf(data=senate_geom, aes(fill=pct_difference)) +
+    scale_fill_viridis_b() +
+  scale_fill_distiller() +
+  theme_minimal()   +
+     scale_fill_gradient2(
+    low = "red",
+    mid = "white",
+    high = "blue",
+    midpoint = 0,
+    name = "Difference", 
+    labels = label_percent()
+  ) +
+  labs(
+    title = "Alsobrooks Wins by a Landslide in Prince George's, Baltimore City", 
+    subtitle = "Victory with Majority Vote in Only Five Maryland Counties",
+    fill = "Percentage Difference"
+  ) 
+   
+```
+
+
+**Q2.** Make a county-level map showing the difference between Donald Trump's county-level performance this year and Larry Hogan's, using percentages to compare the two as you did in Q1. You can use the dataframe you initially loaded for Q1, and you'll need to load the 2024 presidential results in the data folder and join them to it before proceeding. Are there any counties where Trump got a higher percentage than Hogan? How would you describe the map showing the Trump-Hogan difference?
+
+Also answer this: is a map the best way to present this data? What else could you make that might convey more information?
+
+**A2.** Trump won a higher percentage that Hogan in three counties: Garrett, Allegheny, and Somerset. The counties with the greatest difference are also the counties that had the strongest support for Alsobrooks, and are counties with a high number of registered democrats and a high ratio of democrats to republicans. These counties are less likely to vote for Hogan, but he clearly had some bipartisan support across the state, including in these counties. However, these high-difference counties are still staunchly opposed to Trump.
+
+I don't think a map is the best way to present this data. I think negative percentages and percent differences are REALLY confusing for the average reader to interpret. Also, because Trump's lead is so small in Garrett, Allegheny, and Somerset that it's barely perceptible on a gradient map (and that lead should be a key takeaway from this map). I would do a grouped bar chart, and I would drop the percent difference. Instead, my variables would be percentage of votes for Trump and percentage of votes for Hogan, by county. I would probably drop several of the counties hovering around 5% difference to slim the chart down.
+
+```{r}
+president <- read_csv("data/md_pres_county_24.csv")
+
+president <- president |>
+  mutate(GEOID = (as.character(GEOID)))
+
+hogan_trump <- senate_geom |>
+  left_join(president, join_by(GEOID)) 
+
+hogan_trump <- hogan_trump  |>
+  mutate(pct_hogan = Hogan/(Hogan+Trump)) |>
+  mutate(pct_trump = Trump/(Hogan+Trump)) |>
+  mutate(pct_difference = pct_hogan-pct_trump)
+
+```
+
+
+```{r}
+ggplot() +
+  geom_sf(data=hogan_trump, aes(fill=pct_difference)) +
+    scale_fill_viridis_b() +
+  scale_fill_distiller() +
+  theme_minimal()   +
+     scale_fill_gradient2(
+    low = "yellow",
+    high = "red",
+    midpoint = 0,
+    name = "Difference Between Hogan and Trump",
+    labels = label_percent()
+  ) +
+  labs(
+    title = "Hogan Outperforms Trump Throughout Maryland", 
+    subtitle = "Only Western Maryland, Somerset County had Higher Percentage of Trump Votes",
+    fill = "Difference Between Hogan and Trump",
+    caption = "Source: Maryland State Board of Elections") 
+  
+  
+  
+
+
+```
+
+**Q3** Make another map showing the difference between Larry Hogan's county-level performance this year and from his governor race in 2018, using percentages to compare the two as you did in Q2. You can use the dataframe you initially loaded for Q1, and you'll need to load the 2018 governor results in the data folder and join them to it before proceeding. Are there any counties where Hogan did better this year? How would you describe the map showing the difference?
+
+**A3**
+No, Hogan did worse in every county. He lost the most support in Talbot county, and the least in Garrett, Cecil, and Somerset Counties. I think this map is easier to read because the percentages are all negative -- so it clearly conveys all losses. 
+
+```{r}
+hogan_2018 <- read_csv("data/md_gov_county_18.csv")
+
+hogan_2018 <- hogan_2018  |>
+  mutate(GEOID = (as.character(GEOID))) 
+ 
+colnames(hogan_2018)[3] = "hogan_votes_2018"
+ 
+colnames(senate_geom)[20] = "hogan_votes_2024"
+
+hogan_compare <- senate_geom |>
+  left_join(hogan_2018, join_by(GEOID)) 
+
+ hogan_compare <- hogan_compare |>
+ mutate(pct_hogan_2018 = hogan_votes_2018/(hogan_votes_2018 + Jealous + Quinn + Schlakman)) |>
+  mutate(pct_hogan_2024 = hogan_votes_2024/(Alsobrooks + hogan_votes_2024 + Scott)) |>
+  mutate(pct_difference = pct_hogan_2024-pct_hogan_2018)
+
+```
+
+```{r}
+ggplot() +
+  geom_sf(data=hogan_compare, aes(fill=pct_difference)) +
+    scale_fill_viridis_b() +
+  scale_fill_distiller() +
+  theme_minimal()   +
+     scale_fill_gradient2(
+    low = "red",
+mid= "white",
+    high = "blue",
+    midpoint = 0,
+    name = "Difference, 2024 vs. 2018",
+    labels = label_percent()
+  ) +
+  labs(
+    title = "On Election Day, Hogan Fell Short of 2018 Performance in Every Maryland County", 
+    subtitle = "The senate candidate won a smaller share of votes than in the 2018 gubernatorial election",
+    caption = "Source: Maryland State Board of Elections") 
+
+```
+
+
+**Q4.** Choose your own map adventure! In the data folder I've included Maryland county-level results for the abortion rights amendment vote this year, plus the 2020 presidential results by county and 2022 governor's results by county. Using one of those and at least one other contest for comparison, make a county-level map showing what you think is the most interesting aspect of that data, and describe the results in terms of a possible story. You can bring in other data, such as Census information, if you like.
+
+**A4.**
+
+I compared the 2024 voted for the abotion rights amendment with the 2024 senate race results. The story is that the pro-choice amendment was much more popular across Maryland than Alsobrooks. While Alsobrooks won a majority of votes in only 5 Maryland counties, the amendment a majority of votes in all but one county (Garrett). The top six counties with the greatest difference are majority Republican (https://elections.maryland.gov/press_room/2020_stats/Eligible%20Active%20Voters%20by%20County%20-%20PG20.pdf). In Maryland, many voters split their ticket between a democratic candidate and a traditionally democratic cause: abortion rights. The popularity of abortion rights across the states suggests that abortion is less of a partisan issue in Maryland than it is nationally (https://www.pewresearch.org/religion/fact-sheet/public-opinion-on-abortion/). 
+Alsobrooks' campaign often attacked Hogan for not supporting abortion rights (https://marylandmatters.org/2024/11/05/alsobrooks-makes-history-in-senate-race-as-hogan-cannot-repeat-his-magic/). Despite this messaging, many Marylanders voted for Hogan AND abortion rights. What happened here? What influenced these voters' decisions? Did they see Alsobrooks' attack ads? Did they know about Hogan's track record on abortion rights? Why did they care, or not care, about that record? I would try to answer these questions in a story by talking to voters and experts. 
+
+```{r}
+abortion <- read_csv("data/md_abortion_24.csv")
+
+abort_senate <- senate_geom |>
+  left_join(abortion, join_by(County))
+
+abort_senate <- abort_senate |>
+   mutate(pct_for = For/(For+Against)) |>
+  mutate(pct_alsobrooks = Alsobrooks/(Alsobrooks + hogan_votes_2024 + Scott)) |>
+  mutate(pct_difference = pct_for-pct_alsobrooks)|>
+  arrange(desc(pct_difference))
+
+```
+
+```{r}
+ggplot() +
+  geom_sf(data=abort_senate, aes(fill=pct_difference)) +
+    scale_fill_viridis_b() +
+  scale_fill_distiller() +
+  theme_minimal()   +
+     scale_fill_gradient2(
+    low = "white",
+    high = "magenta",
+    midpoint = 0,
+    name = "Percent Difference",
+    labels = label_percent()
+  ) +
+  labs(
+    title = "In Every Maryland County, Abortion Rights More Popular than Alsobrooks", 
+    subtitle = "Pro-choice amendment receives more votes than the democratic candidate for senate",
+    caption = "Source: Maryland State Board of Elections") 
+
+```
+
