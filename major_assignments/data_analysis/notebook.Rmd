@@ -21,12 +21,19 @@ The preview shows you a rendered HTML copy of the contents of the editor. Conseq
 
 ```{r}
 donations <- read_csv("data_use.csv")
-donations |> group_by(contributor_name, contributor_employer) |>
-  summarise(
-    totals = n()) |>
-  arrange(desc(totals))
-  
+
+donations |> group_by(committee_name...2) |> 
+  summarize( 
+    total =n())
+
 ```
+```{r}
+donations |> group_by(contributor_occupastion) |> 
+  summarize( 
+    total =n()) |> 
+  arrange(desc(total))
+```
+
 
 ```{r}
 donations |> group_by(contributor_first_name, contributor_last_name, contributor_zip, contributor_occupation) |>
