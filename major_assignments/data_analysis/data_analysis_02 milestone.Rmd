@@ -1,0 +1,104 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Questions, refined: 
+
+Do more Marylanders donate to in-state or out-of-state candidates?
+Which out-of-state candidates received the most donations and the greatest amount of money in donations?
+What are the demographics of people who donate to Maryland races only? To out-of-state races only?  (using voter data OR using census data to see if those donors are clustered in specific locations, and, if they are, what the makeups of those locations are)
+Among top Maryland donors, what professions donate the most money to senate campaigns? 
+What’s the makeup of donations received by Hogan and Alsobrooks? What percentage of their overall donations were large amounts of money (to be defined, but > $1000, for example) vs small amounts?
+Which party tends to donate more to out-of-state races? 
+
+We refined our dataset further by deciding to focus on individual donations made to senate races by donors in Maryland. Using the FEC website, we downloaded a dataset that met those parameters.  We cleaned the data by removing unnecessary columns and renaming the columns where needed.
+We decided to limit our dataset to donations made in 2024 to ensure that the donations were made after the primary and before the general election. We hoped this would limit the number of candidates receiving donations, since most donations will go toward one of two parties in a certain race.
+
+We also cleaned the data-set, removing numerous columns that were N/A or that were unnecessary to our project. We also had to rename one column and then filter to only the report year of 2024 to limit the donations. 
+To answer our first question and questions, we’ll need to separate the out-of-state candidates from in-state candidates, but this should be easy because we’ll just need to filter out the Hogan and Alsobrooks committees to isolate the out-of-state candidates receiving donations. 
+To answer our third question, we’ll need to either call in demographic data from the census or identify specific locations with clusters of donations, and look up information about those locations using census.gov.
+Question #4 asks about the professions of donors. One obvious challenge here is  that professions and titles are often spelled or worded differently, even if they describe the same job-- in this dataset, there are  2,738 different professions listed. To try to combat this, we will use open refine to reduce the number of occupations  with slight variations in spelling or wording. We will then  limit the data set to the top 1000 donations to make the analysis more manageable. We can also make some broad observations about the data even without cleaning the professions-- for example, it’s obvious that the most donations come from people who say they are “not employed” (45568) or “retired” (29424). The next highest number of donations is more than 20,000 donations less than the number of donations from retired people. 
+There are 207 committees that received donations in our dataset. Originally, we thought that we would use open refine to sort the committees by candidate name, because we thought that most candidates would have multiple committees. However, we found that this was actually pretty uncommon, and we weren’t able to match any names using open refine, once we uploaded our csv. 
+For question 5, we need to do some extra research to decide how to define large donations. One idea is to find the average or median donation, and use that number as the dividing line between small and large donations. Another idea is to see if there’s an agreed-upon definition by people who work on campaigns  or political scientists.
+We have one extra question (#6) that we would like to answer, but it involves party-level analysis that we can’t do because we don’t have the political parties of the donors in this data, and we don’t have anything in this data that indicates the party of each candidate. To answer this question, we could join this data with data from Act Blue and Win Red to identify the parties of donors. We can also probably find a dataset with the committee names and parties for all senate candidates, and join that dataset with ours.
+
+
+```{r}
+# Turn off scientific notation
+options(scipen=999)
+
+library(tidyverse)
+library(sf)
+library(janitor)
+library(tigris)
+```
+
+
+
+
+```{r}
+cleaned_data <- read_csv("cleaned_md_senate_contributions.csv") 
+
+candidate_data <- read_delim("candidate_data.txt", delim = "|", col_names = FALSE) %>%
+  select(X1, X2, X3, X5) |> 
+ rename(
+    candidate_id = X1,
+    candidate_name = X2, 
+    candidate_party = X5)
+    
+data <- read_delim("ccl.txt", delim = "|", col_names = FALSE) 
+cleaned_data_ccl <- data %>%
+  rename(
+    candidate_id = X1,
+    candidate_election_year = X2, 
+    fec_election_year = X3,
+    committee_id = X4,
+    committee_type = X5,
+    committee_design = X6, 
+    linkage_id = X7)
+
+joined_data <- inner_join(cleaned_data, cleaned_data_ccl, by = c("committee_id", "fec_election_year"))
+
+candidate_joined_data <- left_join(joined_data, candidate_data, by =c("candidate_id"))
+
+
+```
+
+
+```{r}
+cleaned_data <- md_senate_contributions |>
+  
+  select( -unused_contbr_id, -committee_name...9, -recipient_committee_org_type, -contributor_suffix, 
+          -contributor_street_2, -contributor_id, -memo_code, -memo_code_full, -candidate_id, 
+          -candidate_name, -candidate_first_name, -candidate_last_name, -candidate_middle_name, 
+          -candidate_prefix, -candidate_suffix, -candidate_office, -candidate_office_full, 
+          -candidate_office_state, -candidate_office_state_full, -candidate_office_district, 
+          -conduit_committee_id, -conduit_committee_name, -conduit_committee_street1, 
+          -conduit_committee_street2, -conduit_committee_city, -conduit_committee_state, 
+          -conduit_committee_zip, -donor_committee_name, -national_committee_nonfederal_account, 
+          -election_type_full, -increased_limit, -is_individual) |>
+  rename(committee_name = `committee_name...2`) |>
+  filter(report_year == 2024)
+
+
+colnames(cleaned_data)
+  
+```
+
+```{r}
+most_contributions <- cleaned_data |>
+  select(committee_name, contribution_receipt_amount) |>
+  group_by(committee_name) |>
+  summarize(total_contribution = sum(contribution_receipt_amount, na.rm = TRUE)) |>
+  arrange(desc(total_contribution)) 
+```
+
+
+
+```{r}
+cleaned_data |>
+  write_csv("data/cleaned_md_senate_contributions.csv")
+```
+
+

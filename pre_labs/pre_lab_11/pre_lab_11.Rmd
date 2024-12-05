@@ -258,7 +258,7 @@ cmte_results |> html_elements('li') |> html_text()
 
 Ok, so now we can see the committee names. But they are surrounded by a bunch of things we don't want, and this *still* isn't a dataframe. Let's solve the second problem first with the `tibble()` function, and use `html_attr` to look for the 'href' value inside the `a` tags.
 
-### Task 11: Turn the contents of the <li> and <a> tags into a dataframe **Task** Run the following code in the gray-colored codeblock below to make a dataframe. Describe the output: **Answer** The committees datagrame is a list of 55, meaning r has broken it down into 55 separate tabs.
+### Task 11: Turn the contents of the <li> and <a> tags into a dataframe **Task** Run the following code in the gray-colored codeblock below to make a dataframe. Describe the output: **Answer** The committees datagrame is a list of 55, meaning r has broken it down into 55 separate
 
 ```{r}
 committees <- cmte_results |> html_elements("li a")
