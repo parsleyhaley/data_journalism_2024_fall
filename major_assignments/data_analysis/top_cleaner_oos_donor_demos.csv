@@ -1,0 +1,6 @@
+contributor_zip,total_population,median_age,median_income,hispanic_or_latino,num_donations,total_amt_donated,white_alone_percent,black_alone_percent,native_american_percent,asian_alone_percent,hawaiian_pacific_percent,other_race_percent,hispanic_or_latino_percent,two_or_more_races_percent,amt_donated_per_resident
+21287,0,NA,NA,0,1,1000,NA,NA,NA,NA,NA,NA,NA,NA,Inf
+21031,26,NA,NA,0,2,26400,0,100,0,0,0,0,0,0,1015.3846153846154
+30639,37,31.5,NA,0,1,3000,0,100,0,0,0,0,0,0,81.08108108108108
+21056,318,66.5,250001,0,7,22117.85,100,0,0,0,0,0,0,0,69.55298742138365
+20812,282,49.9,194375,25,11,18950,85.1063829787234,0.7092198581560284,0,1.0638297872340425,0,1.4184397163120568,8.865248226950355,11.702127659574469,67.19858156028369

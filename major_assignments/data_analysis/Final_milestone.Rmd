@@ -1,0 +1,671 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+R Notebook
+
+#Introduction
+We chose to focus on rich people, or people presumably with high-income jobs, throughout our project. People are generally really interested in the lives of rich people, and this is really appealing to readers, which makes it newsworthy. We noticed this specifically this week in the Wall Street Journal where many of the front page articles pertained to the inside lives of wealthier people, for example investment bankers and more. 
+
+For example, in our question about what people are contributing to with their specific jobs, we focused on CEO's who presumably make a good living. We then looked at that across Democratic and Republican parties to note the differences between these two groups in terms of the same occupation. 
+
+#Process and Question Development
+Do more Marylanders donate to in-state or out-of-state candidates? Which out-of-state candidates received the most donations and the greatest amount of money in donations? What are the demographics of people who donate to Maryland races only? To out-of-state races only? (using voter data OR using census data to see if those donors are clustered in specific locations, and, if they are, what the makeups of those locations are) Among top Maryland donors, what professions donate the most money to senate campaigns? What’s the makeup of donations received by Hogan and Alsobrooks? What percentage of their overall donations were large amounts of money (to be defined, but > $1000, for example) vs small amounts? Which party tends to donate more to out-of-state races?
+
+We refined our dataset further by deciding to focus on individual donations made to senate races by donors in Maryland. Using the FEC website, we downloaded a dataset that met those parameters. We cleaned the data by removing unnecessary columns and renaming the columns where needed. We decided to limit our dataset to donations made in 2024 to ensure that the donations were made after the primary and before the general election. We hoped this would limit the number of candidates receiving donations, since most donations will go toward one of two parties in a certain race.
+
+We also cleaned the data-set, removing numerous columns that were N/A or that were unnecessary to our project. We also had to rename one column and then filter to only the report year of 2024 to limit the donations. To answer our first question and questions, we’ll need to separate the out-of-state candidates from in-state candidates, but this should be easy because we’ll just need to filter out the Hogan and Alsobrooks committees to isolate the out-of-state candidates receiving donations. To answer our third question, we’ll need to either call in demographic data from the census or identify specific locations with clusters of donations, and look up information about those locations using census.gov. Question #4 asks about the professions of donors. One obvious challenge here is that professions and titles are often spelled or worded differently, even if they describe the same job– in this dataset, there are 2,738 different professions listed. To try to combat this, we will use open refine to reduce the number of occupations with slight variations in spelling or wording. We will then limit the data set to the top 1000 donations to make the analysis more manageable. We can also make some broad observations about the data even without cleaning the professions– for example, it’s obvious that the most donations come from people who say they are “not employed” (45568) or “retired” (29424). The next highest number of donations is more than 20,000 donations less than the number of donations from retired people. There are 207 committees that received donations in our dataset. Originally, we thought that we would use open refine to sort the committees by candidate name, because we thought that most candidates would have multiple committees. However, we found that this was actually pretty uncommon, and we weren’t able to match any names using open refine, once we uploaded our csv. For question 5, we need to do some extra research to decide how to define large donations. One idea is to find the average or median donation, and use that number as the dividing line between small and large donations. Another idea is to see if there’s an agreed-upon definition by people who work on campaigns or political scientists. We have one extra question (#6) that we would like to answer, but it involves party-level analysis that we can’t do because we don’t have the political parties of the donors in this data, and we don’t have anything in this data that indicates the party of each candidate. To answer this question, we could join this data with data from Act Blue and Win Red to identify the parties of donors. We can also probably find a dataset with the committee names and parties for all senate candidates, and join that dataset with ours.
+
+#Refining the dataset
+
+```{r}
+options(scipen=999)
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+
+
+```
+
+```{r}
+install.packages('tidycensus')
+```
+
+```{r}
+library(tidycensus)
+```
+
+
+
+```{r}
+md_senate_contributions <- read_csv("data/md_senate_contributions.csv") |>
+
+
+print(column_names)
+```
+
+clean data:
+```{r}
+cleaned_data <- md_senate_contributions |>
+
+select( -unused_contbr_id, -committee_name...9, -recipient_committee_org_type, -contributor_suffix, -contributor_street_2, -contributor_id, -memo_code, -memo_code_full, -candidate_id, -candidate_name, -candidate_first_name, -candidate_last_name, -candidate_middle_name, -candidate_prefix, -candidate_suffix, -candidate_office, -candidate_office_full, -candidate_office_state, -candidate_office_state_full, -candidate_office_district, -conduit_committee_id, -conduit_committee_name, -conduit_committee_street1, -conduit_committee_street2, -conduit_committee_city, -conduit_committee_state, -conduit_committee_zip, -donor_committee_name, -national_committee_nonfederal_account, -election_type_full, -increased_limit, -is_individual) |>
+
+rename(committee_name = `committee_name...2`) |>
+
+filter(report_year == 2024)
+
+
+colnames(cleaned_data)
+```
+
+```{r}
+most_contributions <- cleaned_data |>
+select(committee_name, contribution_receipt_amount) |>
+group_by(committee_name) |>
+summarize(total_contribution = sum(contribution_receipt_amount, na.rm = TRUE)) |>
+arrange(desc(total_contribution)) 
+cleaned_data |>
+  
+write_csv("data/cleaned_md_senate_contributions.csv")
+data <- read_delim("data/ccl.txt", delim = "|", col_names = FALSE)
+
+cleaned_data_ccl <- data |>
+rename(candidate_id = X1,candidate_election_year = X2, fec_election_year = X3, committee_id = X4,committee_type = X5,committee_design = X6, linkage_id = X7)
+```
+
+inner join the committee id and fec election year: 
+
+```{r}
+joined_data <- inner_join(cleaned_data, cleaned_data_ccl, by = c("committee_id", "fec_election_year"))
+```
+
+insert the candidate data:
+```{r}
+candidate_data <- read_delim("data/candidate_data.txt", delim = "|", col_names = FALSE) |>
+  select(X1, X2, X3, X5) |> 
+ rename(candidate_id = X1, candidate_name = X2, candidate_party = X5)
+
+candidate_joined_data <- inner_join(joined_data, candidate_data, by =c("candidate_id"))
+```
+include only these rows: 
+
+```{r}
+
+final_data <- candidate_joined_data |>
+select(committee_id, committee_name, report_year, entity_type_desc,contributor_prefix, contributor_name, contributor_first_name, contributor_last_name, contributor_middle_name, contributor_street_1,contributor_city, contributor_state, contributor_zip,contributor_employer, contributor_occupation, contribution_receipt_date, contribution_receipt_amount, contributor_aggregate_ytd,memo_text,pdf_url, candidate_id, candidate_election_year)
+```
+
+#Question 1: Do more Marylanders donate to in-state or out-of-state candidates? 
+
+```{r}
+final_data_states <- final_data |>
+  mutate(state = substr(candidate_id, 3, 4))
+```
+
+```{r}
+state_contributions <- final_data_states |>
+  group_by(state) |>
+  summarise(
+    contribution_count = n(),                
+    total_contribution = sum(contribution_receipt_amount, na.rm = TRUE)  
+  )
+```
+
+```{r}
+maryland_contrib <- state_contributions |>
+  filter(state == "MD") |>
+  summarise(total_maryland_contrib = sum(total_contribution, na.rm = TRUE))
+
+
+other_states_contrib <- state_contributions |>
+  filter(state != "MD") |>
+  summarise(total_other_states_contrib = sum(total_contribution, na.rm = TRUE))
+
+
+comparison <- data.frame(
+  state = c("Maryland", "Other States"),
+  total_contribution = c(maryland_contrib$total_maryland_contrib, other_states_contrib$total_other_states_contrib)
+)
+```
+
+
+#Answer 1:
+Montana was surprisingly the state with the most contributions --- edging Maryland with 202 more contributions Maryland. Maryland received the highest total sum however, with $5,516,562.24. That was $4,074,226.07 more than the next highest state, which was Montana. The other states combined recieved $7,358,970, a little less than two million more than just the state of Maryland. 
+
+
+#Question 2: Which out-of-state candidates received the most donations and the greatest amount of money in donations? 
+
+```{r}
+final_data_no_md <- final_data_states |>
+  filter(state != "MD")
+```
+
+```{r}
+contributions_summary <- final_data_no_md |>
+  group_by(committee_name) |>
+  summarise(
+    num_contributions = n(), 
+    total_contribution_sum = sum(contribution_receipt_amount, na.rm = TRUE) 
+  ) |>
+  arrange(committee_name)
+```
+
+#Answer 2: 
+Jon Tester, Sherrod Brown and Ruben Gallego were the top three in that order for both contributions recieved and the sum of contributions. The similarity between the three of them is that they were all Democrats running in tightly contested races. Brown was the only to lose his race. Jon Tester also clearly recieved more than the other two --- which explains why Montana received so many more out-of-state contributions than other states. Montanans for Tester received 3,679 more contributions and $238,017.96 more in total contributions compared to Friends of Sherrod Brown.
+
+We chose not to focus on refining and coding this question. Looking at donations to candidates like Tester and Alsobrooks would not answer our newsworthiness because our focus is on where wealthy individuals' money goes in elections. While it is interesting that out-of-state donations align with competitive Senate races, such as Montana and Ohio, this analysis would primarily highlight geographic donation trends rather than the behavior of high-income donors. Our story aims to display how wealthy individuals, particularly CEOs, use their financial power in election donations. Examining specific candidates or out-of-state donations would not provide the same insight into the role of wealth and leadership positions in shaping overall donation patterns, which makes our findings newsworthy.
+
+However, the other questions we explored provided were more relevant. By focusing on CEOs, we were able to show patterns of financial influence resonating with public interest. People are often more curious about how wealthy individuals spend their money, especially in the context of elections, and we felt that the other questions we explored provided more relevant insights that aligned with our potential news story about where wealthy individuals’ money goes in elections.
+
+#Question 3: What are the demographics of people who donate to Maryland races only? To out-of-state races only?
+
+Step 1: find people who donate to ONLY Maryland races.
+```{r}
+
+maryland_only_donors <- final_data_states|>
+  group_by(contributor_name) |>                
+  summarize(only_md = all(state == "MD")) |>
+  filter(only_md) |>                          
+  select(contributor_name)                    
+
+full_maryland_only_donors <- final_data_states |>
+   filter(contributor_name %in% maryland_only_donors$contributor_name)
+
+
+zips_full_maryland_only_donors <- full_maryland_only_donors |>
+  group_by(contributor_name, contributor_zip) |>
+  summarize(
+    num_donations = n(),             
+    total_donated = sum(contribution_receipt_amount) 
+  )|>
+  arrange(desc(num_donations))  
+
+md_zip_summary <- zips_full_maryland_only_donors |>
+  group_by(contributor_zip) |>              
+  summarize(
+    num_donations = n(),                      
+    total_donated = sum(total_donated)      
+  ) |>
+  arrange(desc(num_donations)) 
+
+```
+```{r}
+all_zcta <- get_acs(
+  geography = "zcta",
+  variables = c(
+ "B01003_001", 
+     "B01002_001", #= "median_age",
+ "B19013_001", # = "median_income",
+  "B02001_002", # = "white_alone",
+     "B02001_003", # = "black_alone",
+"B02001_004", # = "native_american",
+    "B02001_005", #= "asian_alone",
+ "B02001_006", # = "hawaiian_pacific",
+"B02001_007",  # = "other_race",
+    "B02001_008", # = "two_or_more_races"
+"B03002_012E"),
+  
+  year = 2022,
+  survey = "acs5",
+  output = "wide"
+)
+
+all_zcta <- all_zcta %>%
+  rename(
+    total_population = B01003_001E,      
+    median_age = B01002_001E,            
+    median_income = B19013_001E,        
+    white_alone = B02001_002E,          
+    black_alone = B02001_003E,         
+    native_american = B02001_004E,      
+    asian_alone = B02001_005E,          
+    hawaiian_pacific = B02001_006E,     
+    other_race = B02001_007E,           
+    two_or_more_races = B02001_008E,
+    hispanic_or_latino = B03002_012E
+  )
+
+```
+```{r}
+
+zips_full_maryland_only_donors <- zips_full_maryland_only_donors |>
+  mutate(
+    contributor_zip = substr(contributor_zip, 1, 5),
+    contributor_zip = sprintf("%05s", contributor_zip)
+  )
+
+zips_full_maryland_only_donors <- zips_full_maryland_only_donors |>
+  mutate(contributor_zip = as.character(contributor_zip))
+
+merged_data_md <- zips_full_maryland_only_donors %>%
+  left_join(all_zcta, by = c("contributor_zip" = "GEOID"))
+
+summarized_md_donor_demos_by_zip <- merged_data_md %>%
+  group_by(contributor_zip) |>
+  summarize(
+    total_population = first(total_population),  
+    median_age = first(median_age),             
+    median_income = first(median_income),       
+    white_alone = first(white_alone),            
+    black_alone = first(black_alone),           
+    native_american = first(native_american),   
+    asian_alone = first(asian_alone),           
+    hawaiian_pacific = first(hawaiian_pacific),  
+    other_race = first(other_race),  
+     hispanic_or_latino = first(hispanic_or_latino),
+    two_or_more_races = first(two_or_more_races),
+    num_donations = n(),                      
+    total_amt_donated = sum(total_donated, na.rm = TRUE) 
+  ) |> 
+  arrange(desc(num_donations))  |> 
+  mutate(
+    white_alone_per_capita = white_alone / total_population,
+    black_alone_per_capita = black_alone / total_population,
+    native_american_per_capita = native_american / total_population,
+    asian_alone_per_capita = asian_alone / total_population,
+    hawaiian_pacific_per_capita = hawaiian_pacific / total_population,
+    other_race_per_capita = other_race / total_population,
+     hispanic_or_latino_per_capita = hispanic_or_latino / total_population,
+    two_or_more_races_per_capita = two_or_more_races / total_population,
+    median_income_per_capita = median_income / total_population
+  ) |>
+   mutate(
+    white_alone_percent = white_alone_per_capita * 100,
+    black_alone_percent = black_alone_per_capita * 100,
+    native_american_percent = native_american_per_capita * 100,
+    asian_alone_percent = asian_alone_per_capita * 100,
+    hawaiian_pacific_percent = hawaiian_pacific_per_capita * 100,
+    other_race_percent = other_race_per_capita * 100,
+    hispanic_or_latino_percent = hispanic_or_latino_per_capita *100,
+    two_or_more_races_percent = two_or_more_races_per_capita * 100,
+    median_income_per_capita = median_income_per_capita * 100
+  ) |>
+ mutate(
+    amt_donated_per_resident = total_amt_donated / total_population
+  ) |>   
+  select(where(~ !all(is.na(.))))
+
+
+```
+```{r}
+
+cleaner_md_donor_demos <- summarized_md_donor_demos_by_zip |> 
+    select(-matches("_per_capita"), -"native_american", -"hawaiian_pacific", -"other_race", -"two_or_more_races", -"white_alone", -"black_alone", -"asian_alone") 
+ 
+
+
+```
+repeat for out of state donors: 
+
+```{r}
+out_of_state_donors <- final_data_states |>
+  filter(state != "MD")
+
+xmaryland_donors <- final_data_states |>
+  filter(state == "MD")
+
+out_of_state_only_donors <- out_of_state_donors |>
+  filter(!contributor_name %in% xmaryland_donors$contributor_name)  |>
+group_by(contributor_name, contributor_zip) |>
+  summarize(
+    num_donations = n(),            
+    total_donated = sum(contribution_receipt_amount)  
+  ) |>
+  arrange(desc(num_donations))  
+
+
+out_of_state_only_donors <- out_of_state_only_donors |>
+  mutate(
+    contributor_zip = substr(contributor_zip, 1, 5),
+    contributor_zip = sprintf("%05s", contributor_zip)
+  )
+
+
+```
+```{r}
+
+merged_data_oos <- out_of_state_only_donors|>
+  left_join(all_zcta, by = c("contributor_zip" = "GEOID"))
+
+cleaner_oos_donor_demos <- merged_data_oos  |>
+   group_by(contributor_zip) |>
+  summarize(
+    total_population = first(total_population), 
+    median_age = first(median_age),              
+    median_income = first(median_income),        
+    white_alone = first(white_alone),         
+    black_alone = first(black_alone),            
+    native_american = first(native_american),   
+    asian_alone = first(asian_alone),           
+    hawaiian_pacific = first(hawaiian_pacific),
+    other_race = first(other_race),     
+    hispanic_or_latino = first(hispanic_or_latino),
+    two_or_more_races = first(two_or_more_races),
+    num_donations = n(),                      
+    total_amt_donated = sum(total_donated, na.rm = TRUE) 
+  ) |> 
+  arrange(desc(num_donations))  |> 
+  mutate(
+   
+    white_alone_per_capita = white_alone / total_population,
+    black_alone_per_capita = black_alone / total_population,
+    native_american_per_capita = native_american / total_population,
+    asian_alone_per_capita = asian_alone / total_population,
+    hawaiian_pacific_per_capita = hawaiian_pacific / total_population,
+    other_race_per_capita = other_race / total_population,
+    hispanic_or_latino_per_capita = hispanic_or_latino / total_population,
+    two_or_more_races_per_capita = two_or_more_races / total_population,
+    median_income_per_capita = median_income / total_population
+  ) |>
+   mutate(
+  
+    white_alone_percent = white_alone_per_capita * 100,
+    black_alone_percent = black_alone_per_capita * 100,
+    native_american_percent = native_american_per_capita * 100,
+    asian_alone_percent = asian_alone_per_capita * 100,
+    hawaiian_pacific_percent = hawaiian_pacific_per_capita * 100,
+    other_race_percent = other_race_per_capita * 100,
+    hispanic_or_latino_percent = hispanic_or_latino_per_capita *100,
+    two_or_more_races_percent = two_or_more_races_per_capita * 100,
+    median_income_per_capita = median_income_per_capita * 100  
+  ) 
+
+cleaner_oos_donor_demos <- cleaner_oos_donor_demos |> select(-matches("_per_capita"), -"native_american", -"hawaiian_pacific", -"other_race", -"two_or_more_races", -"white_alone", -"black_alone", -"asian_alone") |> 
+  
+  mutate(
+    amt_donated_per_resident = total_amt_donated / total_population
+  ) |>
+  select(where(~ !all(is.na(.))))
+
+
+```
+```{r}
+head(merged_data_oos)
+```
+
+
+```{r}
+cleaner_oos_donor_demos <- cleaner_oos_donor_demos |>   
+  mutate(
+    contributor_zip = as.character(contributor_zip),         # Ensure ZIP codes are strings
+    contributor_zip = str_pad(contributor_zip, width = 5,    # Pad with leading zeros to ensure 5 digits
+                              side = "left", pad = "0"),
+    contributor_zip = ifelse(str_detect(contributor_zip, "^\\d{5}$"),  # Keep only valid 5-digit ZIP codes
+                             contributor_zip, NA))  |>
+mutate(contributor_zip = ifelse(contributor_zip == "30639", "20639", contributor_zip))
+
+
+
+cleaner_oos_donor_demos |> arrange(desc(amt_donated_per_resident)) |> write_csv("cleaner_oos_donor_demos.csv")
+
+```
+
+```{r}
+cleaner_md_donor_demos <- cleaner_md_donor_demos |> 
+  mutate(
+    contributor_zip = as.character(contributor_zip),         # Ensure ZIP codes are strings
+    contributor_zip = str_pad(contributor_zip, width = 5,    # Pad with leading zeros to ensure 5 digits
+                              side = "left", pad = "0"),
+    contributor_zip = ifelse(str_detect(contributor_zip, "^\\d{5}$"),  # Keep only valid 5-digit ZIP codes
+                             contributor_zip, NA)) 
+
+cleaner_md_donor_demos|>  arrange(desc(amt_donated_per_resident)) |> write_csv("cleaner_md_donor_demos.csv")
+```
+
+
+```{r}
+top_cleaner_md_donor_demos <- cleaner_md_donor_demos |>
+ arrange(desc(amt_donated_per_resident)) |>
+  slice_head(n = 5)
+
+write_csv(top_cleaner_md_donor_demos, "top_cleaner_md_donor_demos.csv")
+
+```
+
+```{r}
+top_cleaner_oos_donor_demos <- cleaner_oos_donor_demos |>
+    arrange(desc(amt_donated_per_resident)) |>
+  slice_head(n = 5)
+
+write_csv(top_cleaner_oos_donor_demos, "top_cleaner_oos_donor_demos.csv")
+```
+
+
+#Answer 3: 
+
+In asking and answering this question, we attempt to use donations as a measure of a donor's perception of their donation's ability to impact the outcome of a race, meaning that people who donated *only* to Maryland's senate race, we infer, determined that their donation would be most impactful to that race. Conversely, people who donated *only* to out-of-state races determined that their donations were most needed to influence those races. 
+
+It is certainly possible that donors give money to candidates for other reasons (Maybe they're just a big fan of a certain politican). However, given that the top out-of-state donations were made to candidates in competitive races, and that Maryland's senate race was competitive this year, we think this is a reasonable theory that we can use to interpret this data. 
+
+To illustrate our findings, I first created two Datawrapper maps showing donation amount per capita and demographic data, including median income and age, and racial makeup. 
+
+In-state election donors: https://datawrapper.dwcdn.net/91uYI/1/
+Out-of-state election donors: https://datawrapper.dwcdn.net/PllQC/1/
+
+From comparing those maps, it's clear that Marylanders in certain parts of the state (the wealthy DC suburbs, Annapolis, and parts of Talbot county) donate more money, whether they are donating to in-state or out-of-state elections. 
+
+We can see that for Maryland races, donors in those high-donation areas donated similar amounts per capita. However, for out-of-state races, the largest donations per capita were concentrated around the DC suburbs. 
+
+This is likely because Maryland's wealthiest donors live in that part of the state, and made large donations to candidates Jon Tester, Sherrod Brown and Ruben Gallego in an effort to sway competitive races in swing states. 
+
+Donations to Maryland races were more evenly dispersed across the state. This may be because the Maryland race was competitive this year, and Marylanders felt that their contributions to the in-state senate race could make a difference in shaping the outcome of the election (as opposed to more typical election years, where Maryland is an uncontested blue state).
+
+
+# Question 4: Among top Maryland donors, what professions donate the most money to senate campaigns? 
+
+
+```{r}
+individual_donors  <- final_data_states|>
+group_by(contributor_name, contributor_zip, contributor_occupation, contributor_employer) |> 
+  summarize(
+    num_donations = n(),               
+    total_donated = sum(contribution_receipt_amount) 
+  ) |>
+  arrange(desc(num_donations))  
+
+jobs_to_clean <- individual_donors |> 
+  group_by(contributor_occupation) |>
+  summarize(
+    number_jobs = n(),
+    num_donations = n(),  
+     total_donations = sum(total_donated)
+  ) |> arrange(desc(number_jobs)) |>
+write_csv("data/jobs_to_clean.csv")
+
+```
+
+```{r}
+boss_to_clean  <- individual_donors |> 
+  group_by(contributor_employer) |>
+  summarize(
+    number_jobs = n(),
+    num_donations = n(),  
+     total_donations = sum(total_donated)
+  ) |> arrange(desc(number_jobs)) |>
+write_csv("data/boss_to_clean.csv")
+```
+
+
+```{r}
+clean_employer <- read_csv("data/cleaned_boss.csv")
+clean_occupation <- read_csv("data/clean_jobs.csv")
+
+clean_occupation |> 
+  group_by(cleaned_jjobs) |> 
+  summarize(
+    number_jobs = n(),
+    num_donations = n(),  
+    total_donated = sum(total_donations)) |> 
+  arrange(cleaned_jjobs)
+
+```
+```{r}
+
+
+clean_occupation <- read_csv("data/clean_jobs.csv")
+
+
+clean_occupation <- clean_occupation |> 
+  mutate(cleaned_jjobs = case_when(
+    contributor_occupation %in% c("C.E.O.", "CEO", "CEO & FOUNDER", "CEO & MEDIA CONTRIBUTOR", 
+                                  "CEO & PRESIDENT", "CEO UNDERWRITING", "CEO/AUTHOR", 
+                                  "CHAIRMAN, CEO AND PRESIDENT", "CHIEF EXECUTIVE OFFICER", 
+                                  "CO-CEO", "CO-FOUNDER & CEO", "PRESIDENT & CEO", 
+                                  "FOUNDER CEO", "PRESIDENT & C.E.O.", "PRESIDENT / CEO", 
+                                  "PRESIDENT CEO") ~ "CEO",
+    contributor_occupation %in% c("DEPUTY", "DEPUTY ADMINISTRATOR & DIRECTOR", 
+                                  "DEPUTY ASSISTANT SECRETARY", "DEPUTY CHIEF ADMINISTRATIVE OFFICER", 
+                                  "DEPUTY COS", "DEPUTY DIRECTOR", "DEPUTY RESEARCH DIRECTOR", 
+                                  "DEPUTY SECRETARY", "DEPUTY SECRETARY OF COMMERCE") ~ "DEPUTY",
+    TRUE ~ contributor_occupation  
+  ))
+
+
+overall_totals <- clean_occupation |> 
+  summarize(
+    total_jobs = sum(number_jobs, na.rm = TRUE),
+    total_donations = sum(total_donations, na.rm = TRUE)
+  )
+
+
+ceo_deputy_proportions <- clean_occupation |> 
+  filter(cleaned_jjobs %in% c("CEO", "DEPUTY")) |> 
+  group_by(cleaned_jjobs) |> 
+  summarize(
+    total_number_jobs = sum(number_jobs, na.rm = TRUE),
+    total_num_donations = sum(num_donations, na.rm = TRUE),
+    total_donations = sum(total_donations, na.rm = TRUE)
+  ) |> 
+  mutate(
+    prop_number_jobs = round((total_number_jobs / overall_totals$total_jobs) * 100, 2),
+    prop_total_donations = round((total_donations / overall_totals$total_donations) * 100, 2)
+  )
+
+
+ceo_deputy_proportions
+
+```
+
+#Answer 4: 
+
+To answer this question, we put a csv of occupations into OpenRefine. We originally planned to limit the data set, but we found that there were only 1,963 job titles in the data set, which seemed like a reasonable number to refine down into a smaller list of jobs. 
+
+To do this, we grouped certain jobs into categories like "director" and "executive" -- so job titles like "sales director" went into the "director" category. 
+
+We chose to focus on CEOS and began by pulling and merging all of the same terms for CEO. There were 20 of them. We then decided to compare that to deputies, which was extremely interesting to us because they are government employees. According to research, they are allowed to donate. We merged all of the names with deputy together. Then we created a new dataset with DEPUTY and CEO, but the numbers are disporportionate, so we made them proportinate as follows: 
+prop_number_jobs	Proportion of jobs in the dataset for each category, relative to the total number of jobs.
+prop_num_donations	Proportion of the number of donations made, relative to the total donations count.
+prop_total_donations	Proportion of the total dollar value donated, relative to the total donation amount.
+
+Our analysis showed that CEOs make up only 1.88% of all jobs in the dataset, but they account for 3.59% of the total donations. This means that while there aren’t many CEOs compared to other job titles, they donate a lot more money, which reflects their financial influence.
+
+On the other hand, DEPUTYs,many of whom are government employees, make up  0.08% of all jobs and contribute only 0.05% of total donations. This is a much smaller presence compared to CEOs and shows that public sector employees like DEPUTYs donate far less overall.
+
+This is important because it highlights a clear difference between private-sector leadership roles and government positions when it comes to donations. CEOs, who often earn high salaries, seem to have much more financial power to make donations. DEPUTYs, in contrast, contribute far less, which might reflect differences in income or rules about political giving for public employees.
+
+What stands out is that donations aren’t spread evenly across job types—most of the money comes from a small group of people in leadership positions. This raises interesting questions about income, influence, and how donations shape things like political campaigns or charitable efforts.
+
+This is newsworthy because it highlights how a small group of high-income CEOs disproportionately drives donations, revealing economic disparities and the outsized financial influence of private-sector leaders.
+
+
+#Question 5: What’s the makeup of donations received by Hogan and Alsobrooks? What percentage of their overall donations were large amounts of money (to be defined, but > $1000, for example) vs small amounts?
+
+```{r}
+hogan_filtered_data <- final_data |>
+  filter(committee_name %in% c("HOGAN FOR MARYLAND INC."))
+large_donation_threshold <- 1000
+
+hogan_filtered_data |> mutate( donation_category = ifelse(contribution_receipt_amount > large_donation_threshold, "Large", "Small") )
+
+hogan_category_totals <- hogan_filtered_data |>
+  mutate(donation_category = ifelse(contribution_receipt_amount > large_donation_threshold, "Large", "Small")) |>
+  group_by(donation_category) |>
+  summarise(total_amount = sum(contribution_receipt_amount, na.rm = TRUE), .groups = "drop")
+
+hogan_category_totals %>% mutate( percentage = total_amount / sum(total_amount) * 100 )
+
+hogan_category_totals
+```
+
+```{r}
+alsobrooks_filtered_data <- final_data |>
+  filter(committee_name %in% c("ALSOBROOKS FOR SENATE"))
+
+large_donation_threshold <- 1000
+
+alsobrooks_category_totals <- alsobrooks_filtered_data |>
+  mutate(donation_category = ifelse(contribution_receipt_amount > large_donation_threshold, "Large", "Small")) |>
+  group_by(donation_category) |>
+  summarise(total_amount = sum(contribution_receipt_amount, na.rm = TRUE), .groups = "drop")
+
+alsobrooks_category_totals  %>% mutate( percentage = total_amount / sum(total_amount) * 100 )
+
+alsobrooks_category_totals
+```
+
+
+```{r}
+hogan_filtered_data <- hogan_filtered_data |> 
+  mutate(contributor_zip = substr(as.character(contributor_zip), 1, 5))
+
+```
+
+```{r}
+hogan_zips <- hogan_filtered_data |>
+  group_by(contributor_zip) |>
+  summarise(count = n())
+
+write_csv(hogan_zips, "hogan_zips.csv")
+```
+
+```{r}
+alsobrooks_filtered_data <- alsobrooks_filtered_data |> 
+  mutate(contributor_zip = substr(as.character(contributor_zip), 1, 5))
+
+```
+
+```{r}
+alsobrooks_zips <- alsobrooks_filtered_data |>
+  group_by(contributor_zip) |>
+  summarise(count = n())
+
+write_csv(alsobrooks_zips, "alsobrooks_zips.csv")
+```
+
+```{r}
+hogan_large_data <- hogan_filtered_data |> 
+  mutate(contributor_zip = substr(as.character(contributor_zip), 1, 5)) |> 
+  filter(contribution_receipt_amount > 1000) |>
+  group_by(contributor_zip) |>
+  summarise(count = n())
+write_csv(hogan_large_data, "hogan_large.csv")
+```
+
+```{r}
+alsobrooks_large_data <- alsobrooks_filtered_data |> 
+  mutate(contributor_zip = substr(as.character(contributor_zip), 1, 5)) |> 
+  filter(contribution_receipt_amount > 1000) |>
+  group_by(contributor_zip) |>
+  summarise(count = n())
+write_csv(alsobrooks_large_data, "alsobrooks_large.csv")
+```
+
+A5: Here we see that Hogan receives signficantly more money in general in comparison to Alsobrooks. Additionally, Hogan receives many more large donations (in excess of millions) in comparison to Alsobrooks. Whereas, the small donations are around 600,000 more. This shows that either Hogan has a larger "fan base" of people who donate to him or perhaps his electorate is just wealthier. Additionally,it would be interesting to note whether Hogan has a higher amount of donations because he was known before. 
+
+We then looked at where these donations were from. For Hogan, his most donations came from Annapolis --- his former residence and where the state legislature is located. His second most donations came from Potomac, the zip code with the highest median household income in Maryland. However, 14 different zip codes donated more to Alsobrooks than Annapolis did for Hogan. This showed Hogan thrived off of large donations in areas that Alsobrooks did reach.
+
+We tested this using chloropleth maps to show the zip codes where the two received large donations. The map showed a lot of areas in northern Maryland he capitalized with those donations where Alsobrooks did not recieve any.  
+
+There were a few zip codes which did not register on DataWrapper when making these graphs, but they did not have more than five donations, so we did not think that it ultimately affected determining where the hot areas were for the two receiving their donations. 
+
+Map of Larry Hogan's donations by zipcode: https://www.datawrapper.de/_/5LB3T/
+
+Map of Angela Alsobrooks' donations by zipcode: 
+https://www.datawrapper.de/_/ChtAr/ 
+
+Map of Angela Alsobrooks' large donations by zipcode:
+https://www.datawrapper.de/_/BEuvY/ 
+
+Map of Larry Hogan's large donations by zipcode: 
+https://www.datawrapper.de/_/6KTF3/
