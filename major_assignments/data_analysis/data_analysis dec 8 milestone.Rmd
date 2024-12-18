@@ -23,7 +23,7 @@ library(lubridate)
 ```
 
 ```{r}
-install.packages('tidycensus')no
+install.packages('tidycensus')
 ```
 
 ```{r}
@@ -193,7 +193,8 @@ all_zcta <- get_acs(
     "B02001_005", #= "asian_alone",
  "B02001_006", # = "hawaiian_pacific",
 "B02001_007",  # = "other_race",
-    "B02001_008"), # = "two_or_more_races"
+    "B02001_008", # = "two_or_more_races"
+"B03002_012E"),
   
   year = 2022,
   survey = "acs5",
@@ -211,7 +212,8 @@ all_zcta <- all_zcta %>%
     asian_alone = B02001_005E,          
     hawaiian_pacific = B02001_006E,     
     other_race = B02001_007E,           
-    two_or_more_races = B02001_008E     
+    two_or_more_races = B02001_008E,
+    hispanic_or_latino = B03002_012E
   )
 
 ```
@@ -240,7 +242,8 @@ summarized_md_donor_demos_by_zip <- merged_data_md %>%
     native_american = first(native_american),   
     asian_alone = first(asian_alone),           
     hawaiian_pacific = first(hawaiian_pacific),  
-    other_race = first(other_race),             
+    other_race = first(other_race),  
+     hispanic_or_latino = first(hispanic_or_latino),
     two_or_more_races = first(two_or_more_races),
     num_donations = n(),                      
     total_amt_donated = sum(total_donated, na.rm = TRUE) 
@@ -253,6 +256,7 @@ summarized_md_donor_demos_by_zip <- merged_data_md %>%
     asian_alone_per_capita = asian_alone / total_population,
     hawaiian_pacific_per_capita = hawaiian_pacific / total_population,
     other_race_per_capita = other_race / total_population,
+     hispanic_or_latino_per_capita = hispanic_or_latino / total_population,
     two_or_more_races_per_capita = two_or_more_races / total_population,
     median_income_per_capita = median_income / total_population
   ) |>
@@ -263,15 +267,22 @@ summarized_md_donor_demos_by_zip <- merged_data_md %>%
     asian_alone_percent = asian_alone_per_capita * 100,
     hawaiian_pacific_percent = hawaiian_pacific_per_capita * 100,
     other_race_percent = other_race_per_capita * 100,
+    hispanic_or_latino_percent = hispanic_or_latino_per_capita *100,
     two_or_more_races_percent = two_or_more_races_per_capita * 100,
     median_income_per_capita = median_income_per_capita * 100
-  )
+  ) |>
+ mutate(
+    amt_donated_per_resident = total_amt_donated / total_population
+  ) |>   
+  select(where(~ !all(is.na(.))))
+
 
 ```
 ```{r}
 
 cleaner_md_donor_demos <- summarized_md_donor_demos_by_zip |> 
-    select(-matches("_per_capita"), -"native_american", -"hawaiian_pacific", -"other_race", -"two_or_more_races", -"white_alone", -"black_alone", -"asian_alone")
+    select(-matches("_per_capita"), -"native_american", -"hawaiian_pacific", -"other_race", -"two_or_more_races", -"white_alone", -"black_alone", -"asian_alone") 
+ 
 
 
 ```
@@ -307,7 +318,7 @@ out_of_state_only_donors <- out_of_state_only_donors |>
 merged_data_oos <- out_of_state_only_donors|>
   left_join(all_zcta, by = c("contributor_zip" = "GEOID"))
 
-cleaner_oos_donor_demos <- merged_data_oos  
+cleaner_oos_donor_demos <- merged_data_oos  |>
    group_by(contributor_zip) |>
   summarize(
     total_population = first(total_population), 
@@ -318,8 +329,9 @@ cleaner_oos_donor_demos <- merged_data_oos
     native_american = first(native_american),   
     asian_alone = first(asian_alone),           
     hawaiian_pacific = first(hawaiian_pacific),
-    other_race = first(other_race),              
-    two_or_more_races = first(two_or_more_races)
+    other_race = first(other_race),     
+    hispanic_or_latino = first(hispanic_or_latino),
+    two_or_more_races = first(two_or_more_races),
     num_donations = n(),                      
     total_amt_donated = sum(total_donated, na.rm = TRUE) 
   ) |> 
@@ -332,6 +344,7 @@ cleaner_oos_donor_demos <- merged_data_oos
     asian_alone_per_capita = asian_alone / total_population,
     hawaiian_pacific_per_capita = hawaiian_pacific / total_population,
     other_race_per_capita = other_race / total_population,
+    hispanic_or_latino_per_capita = hispanic_or_latino / total_population,
     two_or_more_races_per_capita = two_or_more_races / total_population,
     median_income_per_capita = median_income / total_population
   ) |>
@@ -343,19 +356,55 @@ cleaner_oos_donor_demos <- merged_data_oos
     asian_alone_percent = asian_alone_per_capita * 100,
     hawaiian_pacific_percent = hawaiian_pacific_per_capita * 100,
     other_race_percent = other_race_per_capita * 100,
+    hispanic_or_latino_percent = hispanic_or_latino_per_capita *100,
     two_or_more_races_percent = two_or_more_races_per_capita * 100,
     median_income_per_capita = median_income_per_capita * 100  
-  ) |> select(-matches("_per_capita"), -"native_american", -"hawaiian_pacific", -"other_race", -"two_or_more_races", -"white_alone", -"black_alone", -"asian_alone")
+  ) 
+
+cleaner_oos_donor_demos <- cleaner_oos_donor_demos |> select(-matches("_per_capita"), -"native_american", -"hawaiian_pacific", -"other_race", -"two_or_more_races", -"white_alone", -"black_alone", -"asian_alone") |> 
+  
+  mutate(
+    amt_donated_per_resident = total_amt_donated / total_population
+  ) |>
+  select(where(~ !all(is.na(.))))
 
 
 ```
 ```{r}
-cleaner_oos_donor_demos |> arrange(desc(total_amt_donated))
+head(merged_data_oos)
+```
+
+
+```{r}
+cleaner_oos_donor_demos |>   
+  mutate(
+    contributor_zip = as.character(contributor_zip),         # Ensure ZIP codes are strings
+    contributor_zip = str_pad(contributor_zip, width = 5,    # Pad with leading zeros to ensure 5 digits
+                              side = "left", pad = "0"),
+    contributor_zip = ifelse(str_detect(contributor_zip, "^\\d{5}$"),  # Keep only valid 5-digit ZIP codes
+                             contributor_zip, NA))
+
+
+cleaner_oos_donor_demos |> arrange(desc(amt_donated_per_resident)) |> write_csv("cleaner_oos_donor_demos.csv")
+
 ```
 
 ```{r}
-cleaner_md_donor_demos |> arrange(desc(total_amt_donated))
+cleaner_md_donor_demos |> 
+  mutate(
+    contributor_zip = as.character(contributor_zip),         # Ensure ZIP codes are strings
+    contributor_zip = str_pad(contributor_zip, width = 5,    # Pad with leading zeros to ensure 5 digits
+                              side = "left", pad = "0"),
+    contributor_zip = ifelse(str_detect(contributor_zip, "^\\d{5}$"),  # Keep only valid 5-digit ZIP codes
+                             contributor_zip, NA)) |> 
+  arrange(desc(amt_donated_per_resident)) |> write_csv("cleaner_md_donor_demos.csv")
 ```
+
+
+cleaner_oos_donor_demos |> write_csv("cleaner_oos_donor_demos.csv")
+
+
+
 It looks like in this data, the top contributing zip codes are the same for out-of-state and in-state donations. The top out-of-state donors donated much more than the in-state donors, and there were more of them in the top zip codes. A top in-state donor zip code is Anapolis, and doesn't appear in the top ten zip codes for out-of-state.
 
 As we keep going to answer this question, we should calculate the amount donated per person. We should consider presenting this data with two maps side-by-side. 
