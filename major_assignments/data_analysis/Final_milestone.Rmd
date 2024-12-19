@@ -431,6 +431,68 @@ top_cleaner_oos_donor_demos <- cleaner_oos_donor_demos |>
 write_csv(top_cleaner_oos_donor_demos, "top_cleaner_oos_donor_demos.csv")
 ```
 
+```{r}
+
+cleaner_oos_donor_demos <- cleaner_oos_donor_demos |> 
+  arrange(desc(amt_donated_per_resident))
+
+cleaner_md_donor_demos <- cleaner_md_donor_demos |> 
+  arrange(desc(amt_donated_per_resident))
+```
+
+```{r}
+
+#Creating table comparing demographics of donors to in-state and out-of-state elections.
+
+oos_averages <- cleaner_oos_donor_demos |> 
+  mutate(across(where(is.numeric), ~ ifelse(is.infinite(.), NA, .))) |>
+   summarize(
+            white_pct = mean(white_alone_percent, na.rm = TRUE), 
+            black_pct = mean(black_alone_percent, na.rm = TRUE), 
+            native_american_pct = mean(native_american_percent, na.rm = TRUE), 
+            asian_pct = mean(asian_alone_percent, na.rm = TRUE), 
+            hawaiian_pacific_pct = mean(hawaiian_pacific_percent, na.rm = TRUE), 
+            other_race_pct = mean(other_race_percent, na.rm = TRUE), 
+            hispanic_or_latino_pct = mean(hispanic_or_latino_percent, na.rm = TRUE), 
+            two_or_more_races_pct = mean(two_or_more_races_percent, na.rm = TRUE), 
+            amt_donated_per_resident = mean(amt_donated_per_resident, na.rm = TRUE), 
+            median_age = median(median_age,na.rm = TRUE), 
+            median_income = median(median_income, na.rm = TRUE),
+   total_num_donations = sum(num_donations, na.rm = TRUE),
+    total_amt_donations = sum(total_amt_donated, na.rm = TRUE), 
+race_donated = c("out_of_state")) |>  
+  select(race_donated, everything()) |> 
+  mutate(across(where(is.numeric), ~ round(. , 2))) |> 
+write_csv("oos_averages.csv")
+
+  
+md_averages <- cleaner_md_donor_demos |> 
+  summarize(
+            white_pct = mean(white_alone_percent, na.rm = TRUE), 
+            black_pct = mean(black_alone_percent, na.rm = TRUE), 
+            native_american_pct = mean(native_american_percent, na.rm = TRUE), 
+            asian_pct = mean(asian_alone_percent, na.rm = TRUE), 
+            hawaiian_pacific_pct = mean(hawaiian_pacific_percent, na.rm = TRUE), 
+            other_race_pct = mean(other_race_percent, na.rm = TRUE), 
+            hispanic_or_latino_pct = mean(hispanic_or_latino_percent, na.rm = TRUE), 
+            two_or_more_races_pct = mean(two_or_more_races_percent, na.rm = TRUE), 
+            amt_donated_per_resident = mean(amt_donated_per_resident, na.rm = TRUE), 
+            median_age = median(median_age,na.rm = TRUE), 
+            median_income = median(median_income, na.rm = TRUE),
+   total_num_donations = sum(num_donations, na.rm = TRUE),
+    total_amt_donations = sum(total_amt_donated, na.rm = TRUE), 
+   race_donated = c("maryland")) |> 
+  select(race_donated, everything()) |> 
+  mutate(across(where(is.numeric), ~ round(. , 2))) |> 
+write_csv("md_averages.csv")
+  
+combined_averages <- bind_rows(oos_averages, md_averages)|>
+  write_csv("combined_averages.csv") 
+
+Datawrapper table: https://datawrapper.dwcdn.net/nc5uT/1/
+
+
+```
 
 #Answer 3: 
 
@@ -450,6 +512,10 @@ We can see that for Maryland races, donors in those high-donation areas donated 
 This is likely because Maryland's wealthiest donors live in that part of the state, and made large donations to candidates Jon Tester, Sherrod Brown and Ruben Gallego in an effort to sway competitive races in swing states. 
 
 Donations to Maryland races were more evenly dispersed across the state. This may be because the Maryland race was competitive this year, and Marylanders felt that their contributions to the in-state senate race could make a difference in shaping the outcome of the election (as opposed to more typical election years, where Maryland is an uncontested blue state).
+
+I also found that, comparing the demographics of the two groups against each other, they were remarkable similar in every factor that I measured. This might imply that demographics like race, income, or age did not influence a donor's liklihood to donate in-state vs out-of-state. 
+
+I created this table with my findings: https://datawrapper.dwcdn.net/nc5uT/1/
 
 
 # Question 4: Among top Maryland donors, what professions donate the most money to senate campaigns? 
@@ -669,3 +735,13 @@ https://www.datawrapper.de/_/BEuvY/
 
 Map of Larry Hogan's large donations by zipcode: 
 https://www.datawrapper.de/_/6KTF3/
+
+
+
+
+
+
+
+
+
+
